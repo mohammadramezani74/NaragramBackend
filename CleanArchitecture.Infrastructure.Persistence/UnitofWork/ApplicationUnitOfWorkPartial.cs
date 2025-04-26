@@ -1,0 +1,26 @@
+﻿using CleanArchitecture.Domain.Entities.Chat;
+using CleanArchitecture.Domain.Entities.Identity;
+using CleanArchitecture.Domain.Entities.ToDoItems;
+using CleanArchitecture.Infrastructure.Persistence.Outbox;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
+{
+    public partial class ApplicationUnitOfWork
+    {
+        public DbSet<User> Users => _context.Set<User>();
+        public DbSet<RefreshToken> TokenProvider => _context.Set<RefreshToken>();
+        public DbSet<TodoItem> TodoItem => _context.Set<TodoItem>();
+        public DbSet<OutboxMessage> OutboxMessage => _context.Set<OutboxMessage>();
+        public DbSet<Conversation> Conversation => _context.Set<Conversation>();
+        public DbSet<Message> Messages => _context.Set<Message>();
+        public DbSet<ChatFiles> ChatFiles => _context.Set<ChatFiles>();
+        public DbSet<UserAvatar> UserAvatars => _context.Set<UserAvatar>();
+        public DbSet<MessageReaction> MessageReactions => _context.Set<MessageReaction>();
+    }
+}

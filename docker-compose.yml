@@ -1,0 +1,23 @@
+version: '3.4'
+
+services:
+  cleanarchitecture.presentation:
+    image: ${DOCKER_REGISTRY-}cleanarchitecturepresentation
+    build:
+      context: .
+      dockerfile: CleanArchitecture.Presentation/Dockerfile
+    environment:
+        - ASPNETCORE_ENVIROMENT=Development
+        - ASPNETCORE_URLS=https://+:443;http://+:80
+    ports:
+        - 8082:80
+        - 8084:443
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus_grafprom
+    restart: always
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  
