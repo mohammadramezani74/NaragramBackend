@@ -22,5 +22,6 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<ChatFiles> ChatFiles => _context.Set<ChatFiles>();
         public DbSet<UserAvatar> UserAvatars => _context.Set<UserAvatar>();
         public DbSet<MessageReaction> MessageReactions => _context.Set<MessageReaction>();
+        public DbSet<FireBaseToken> FireBaseTokens =>_context.Set<FireBaseToken>();
     }
 }

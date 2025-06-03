@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Abstraction;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Abstraction.Caching;
 using CleanArchitecture.Application.Abstraction.CsvFiles;
 using CleanArchitecture.Application.Abstraction.Sms;
@@ -8,10 +9,12 @@ using CleanArchitecture.Infrastructure.BackgroundJob;
 using CleanArchitecture.Infrastructure.Caching;
 using CleanArchitecture.Infrastructure.Files;
 using CleanArchitecture.Infrastructure.HealthChecks;
+using CleanArchitecture.Infrastructure.Notification;
 using CleanArchitecture.Infrastructure.Persistence;
 using CleanArchitecture.Infrastructure.smsProvider;
 using CleanArchitecture.Infrastructure.Time;
 using CleanArchitecture.Infrastructure.Uploader;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
@@ -46,6 +49,7 @@ public static class ConfigureServices
         services.AddTransient<ICacheService, CacheService>();
         services.AddScoped<ICsvFileBuilder,CsvFileBuilder>();
         services.AddSingleton<IUploaderService, UploadService>();
+        services.AddScoped<INotificationService, NotificationService>();
         return services;
     }
 

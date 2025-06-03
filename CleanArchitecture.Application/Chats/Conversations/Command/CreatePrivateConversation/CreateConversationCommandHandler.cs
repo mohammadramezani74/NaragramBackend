@@ -47,7 +47,9 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivat
                     return result;
                 }
 
-
+                if (me.Id == other.Id) {
+                    return new ConverSationResponse();
+                }
             var privateConversation = Domain.Entities.Chat.Conversation
                   .Create(me!, other!);
             _uow.Conversation.Add(privateConversation);

@@ -130,6 +130,8 @@ namespace CleanArchitecture.Application.Chats.Messages
                         isEdited = x.ModifiedDate.HasValue,
                         ParentId = x.ParentMessageId,
                         Type = (int)x.MessageType,
+                        Longitude = x.Longitude,
+                        Latitude = x.Latitude,
                         FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
                         {
                             FileId = cf.Id,

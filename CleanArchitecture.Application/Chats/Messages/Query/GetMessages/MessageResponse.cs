@@ -23,6 +23,8 @@ namespace CleanArchitecture.Application.Chats.Messages
         public Guid? ParentId { get; set; }
         public ChatFilesDto? FileContent { get; set; }
         public string? Reaction { get; set; }
+        public float? Latitude { get; set; }
+        public float? Longitude { get; set; }
 
         public void Register(TypeAdapterConfig config)
         {

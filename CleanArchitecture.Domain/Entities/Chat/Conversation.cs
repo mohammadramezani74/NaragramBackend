@@ -70,7 +70,8 @@ namespace CleanArchitecture.Domain.Entities.Chat
          }
 
      };
-        public Message AddMessage(string message,User user,Guid? ParrentId=null,List<ChatFiles>? files=null,MessageType type=MessageType.Text)
+        public Message AddMessage(string message,User user,Guid? ParrentId=null,List<ChatFiles>? files=null,MessageType type=MessageType.Text
+            ,float? latitude=null,float? Longitude = null)
         {
             Messages ??= new List<Message>(); 
          var Message=
@@ -81,7 +82,10 @@ namespace CleanArchitecture.Domain.Entities.Chat
                 CreatedByUser=user,
                 ParentMessageId=ParrentId,
                 ChatFiles=files,
-                MessageType= type
+                MessageType= type,
+                Latitude= latitude,
+                Longitude= Longitude
+
 
            };
             Messages.Add(Message);

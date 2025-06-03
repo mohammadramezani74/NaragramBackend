@@ -11,6 +11,7 @@ using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Users.Commands.CreateUser;
 using CleanArchitecture.Application.Users.Queries.GetUser;
 using CleanArchitecture.Domain.Entities.Identity;
+using CleanArchitecture.Domain.Enums;
 using CleanArchitecture.Domain.ValueObjects;
 
 using Microsoft.AspNetCore.Http;
@@ -138,13 +139,28 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             .GetUserId();
 
         var conversationsOfUser=await _unitOfWork.Conversation.AsNoTracking()
-            .Include(x=>x.Users).ThenInclude(x=>x.User.UserAvatars)
+            .Include(x=>x.Users.Where(x=>x.UserId!=userId))
+            .ThenInclude(x=>x.User.UserAvatars)
             .Where(x=>x.Users.Any(x=>x.UserId== userId))
             .ToListAsync();
+
+
+
+        var conversationIds = conversationsOfUser.Select(c => c.Id).ToList();
+
         var unreadMessages = await _unitOfWork.Messages.AsNoTracking()
-            .Include(x=>x.Conversation.Users)
-            .Where(x => x.Conversation.Users.Any(x => x.UserId == userId) &&
-            x.Seen == false).ToListAsync(cancellationToken);
+            .Where(x => conversationIds.Contains(x.ConversationId) && !x.Seen
+            &&x.CreatedByUserId!=userId)
+            .ToListAsync(cancellationToken);
+
+        var lastMessages = _unitOfWork.Messages
+           .Where(m => conversationIds.Contains(m.ConversationId))
+           .GroupBy(m => m.ConversationId)
+           .Select(g => g
+               .OrderByDescending(m => m.CreateDate)
+               .FirstOrDefault())
+           .ToList();
+
         var AllUsers=await _unitOfWork.Messages.AsNoTracking()
             .Where(x=>x.Conversation.Users.Any(x=>x.UserId== userId))
             .Select(x=>x.ConversationId).Distinct().ToListAsync();
@@ -155,22 +171,42 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         {
             var users = conversation.Users.ToList();
             foreach (var usertarget in users)
-            {if(usertarget.UserId!= userId) {
-                var model = new GetUserResponse
-                {
-                    Id = usertarget.User.Id,
-                    ConversationId= conversation.Id,
-                    MessageUnreadedCount= unreadMessages.Where(x=>x.CreatedByUserId== usertarget.User.Id).Count(),
-                    LastSeen = usertarget.User.LastLoginDate.HasValue? usertarget.User.LastLoginDate.Value.DateTime:null,
-                    Address = usertarget.User.Address,
-                    Age = usertarget.User.Age.ToString(),
-                    FirstName = usertarget.User.FirsName!,
-                    LastName = usertarget.User.LastName!,
-                    UserName = usertarget.User.UserName!,
-                    Avatar = SetAvatar(usertarget.User)
+            {
+                string messagetitle = string.Empty;
+                Guid? MessageId = null;
+                bool lastmessageForme = false;
+                DateTime MessageSendDate=DateTime.Now;
+                if (usertarget.UserId!= userId) {
 
+                    var lastmessage = lastMessages.Where(x => x.ConversationId == conversation.Id)
+                        .FirstOrDefault();
+                    if (lastmessage != null)
+                    {
+                        messagetitle = lastmessage.MessageType == Domain.Enums.MessageType.Text
+     ? (lastmessage.Content.Length > 30 ? lastmessage.Content.Substring(0, 30) + "..." : lastmessage.Content)
+     : (GetMessageFormat(lastmessage.MessageType).Length > 30 ? "..." + GetMessageFormat(lastmessage.MessageType).Substring(0, 30) : GetMessageFormat(lastmessage.MessageType));
+                        MessageId = lastmessage.Id;
+                        MessageSendDate = lastmessage.CreateDate;
+                        lastmessageForme = lastmessage.CreatedByUserId == userId;
+                    }
+                    var model = new GetUserResponse
+                        {
+                            Id = usertarget.User.Id,
+                            ConversationId = conversation.Id,
+                            MessageUnreadedCount = unreadMessages.Where(x => x.CreatedByUserId == usertarget.User.Id).Count(),
+                            LastSeen = usertarget.User.LastLoginDate.HasValue ? usertarget.User.LastLoginDate.Value.DateTime : null,
+                            Address = usertarget.User.Address,
+                            Age = usertarget.User.Age.ToString(),
+                            FirstName = usertarget.User.FirsName!,
+                            LastName = usertarget.User.LastName!,
+                            UserName = usertarget.User.UserName!,
+                            Avatar = SetAvatar(usertarget.User),
+                            LastReceivedMessage=messagetitle,
+                            LastReceivedMessageId=MessageId,
+                            IsLastReceivedMessageForMe= lastmessageForme,
+                            LastReceivedMessageSendDate=MessageSendDate.FormatPersianDate().ToPersianNumber()
 
-                };
+                        };
                 userList.Add(model); 
                 }
             }
@@ -191,10 +227,25 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 Avatar = SetAvatar(x)
             })
             .ToListAsync();
-
+      
 
         return userList.Union(userswithoutConversation).ToList();
     }
+
+
+    private static string GetMessageFormat(MessageType messageType)
+    {
+        string Messagetype = messageType switch
+        {
+            MessageType.Video => "پیام ویدیویی",
+            MessageType.Audio =>"پیام صوتی",
+            MessageType.Image =>"پیام تصویری",
+            MessageType.Document=>"پیام  اسنادی",
+              MessageType.Location => "لوکیشن"
+        };
+        return Messagetype;
+    }
+
     public async Task<OperationResult>SendValidateCode(string phoneNumber)
     {
         var op = new OperationResult();

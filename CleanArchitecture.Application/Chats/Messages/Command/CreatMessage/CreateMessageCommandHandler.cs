@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Abstraction;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -7,6 +8,7 @@ using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Hubs.Models;
 using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
+using CleanArchitecture.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -21,12 +23,14 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
     internal sealed class CreateMessageCommandHandler
         (IApplicationUserManager userManager,
          IApplicationUnitOfWork uow, 
+         INotificationService notifService,
          IHttpContextAccessor httpContext,
          IHubContext<NaraHub,IChatHubClient> hubContext)
         : ICommandHandler<CreateMessageCommand,Guid>
     {
         private readonly IApplicationUserManager _userManager = userManager;
         private readonly IApplicationUnitOfWork _uow = uow;
+        private readonly INotificationService _notifService = notifService;
         private readonly IHttpContextAccessor _httpContext = httpContext;
         private readonly IHubContext<NaraHub, IChatHubClient> _hubContext = hubContext;
 
@@ -34,6 +38,11 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
         {var op=new OperationResult();
             var MyId = _userManager.UserId!.Value;
             var Myuser=await _userManager.GetUserBy(MyId);
+            var type = 0;
+            if (request.Longitude != null)
+            {
+                type = 5;
+            }
             var conversation=await _uow.Conversation
                 .Include(x=>x.Users)
                                                                .SingleOrDefaultAsync
@@ -45,10 +54,13 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
 
             var anotherUser = conversation.Users.Where(x => x.UserId != MyId).Select(x => x.UserId).First();
 
-            var message = conversation.AddMessage(request.Message,Myuser!,request.ParentId);
+
+            var message = conversation.AddMessage(request.Message,Myuser!,request.ParentId,latitude:request.latitude,
+                Longitude:request.Longitude,type:(MessageType) type);
               var result=  await _uow.SaveChangesAsync(cancellationToken);
             var hostName = _httpContext.HttpContext.Request.Host.Value;
             var scheme = _httpContext.HttpContext.Request.Scheme;
+          
          
             var messageDto = new ChatMessageDto {
                 Id = message.Id,
@@ -56,20 +68,32 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
                 IsMine =false,
                 SendAt = message.CreateDate,
                 SenderName = Myuser.LastName + " " + Myuser.FirsName,
-                Type = 0,
+                Type = type,
                 UserId = MyId,
                 IsSeen = false,
-                ParentId=message.ParentMessageId
+                ParentId=message.ParentMessageId,
+                Latitude = message.Latitude,
+                Longitude = message.Longitude,
             };
           
-            var notification = new NotificationModelDto
-                  (Myuser.LastName + " " + Myuser.FirsName,
-                  SetAvatar(Myuser,hostName,scheme),
-                  request.Message,
-                  $"{scheme}://{hostName}/chat"
+    
+            try
+            {
+                var firebaseTokens = await _uow.FireBaseTokens.AsNoTracking().Where(x => x.UserId == anotherUser).ToListAsync();
+                if (firebaseTokens.Any())
+                {
+                    foreach (var token in firebaseTokens)
+                    {
+                         await _notifService.Send(token.Token, messageDto.Content, Myuser.FirsName + " " + Myuser.LastName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
 
-                );
-            await _hubContext.Clients.User(anotherUser.ToString()).ReceivedNotifications(notification);
+              
+            }
+           
             await _hubContext.Clients.User(anotherUser.ToString()).IncreaseMessageCount(MyId);
             await _hubContext.Clients.User(anotherUser.ToString()).MessagedReceived(messageDto);
             if (result.IsSuccess)

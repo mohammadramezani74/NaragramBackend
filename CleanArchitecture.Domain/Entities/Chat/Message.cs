@@ -17,6 +17,8 @@ namespace CleanArchitecture.Domain.Entities.Chat
         public string Content { get; internal set; } = null!;
         public bool Seen { get; internal set; }
         public MessageType MessageType { get; internal set; }
+        public float? Latitude { get; set; }
+        public float? Longitude { get; set; }
 
         public Guid? ParentMessageId { get; set; }
         public Message? ParentMessage { get; internal set; }

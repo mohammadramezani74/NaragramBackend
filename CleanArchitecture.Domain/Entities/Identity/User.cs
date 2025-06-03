@@ -26,6 +26,8 @@ namespace CleanArchitecture.Domain.Entities.Identity
         public DateTimeOffset? LastLoginDate { get; private set; }
         public virtual ICollection<RefreshToken> RefreshTokens { get; internal set; } = new List<RefreshToken>();
         public virtual ICollection<UserAvatar> UserAvatars { get; internal set; } = new List<UserAvatar>();
+        public virtual ICollection<FireBaseToken> firebaseTokens { get; internal set; } = new List<FireBaseToken>();
+
 
 
         public User(string userName, int age, string? email, string lastName, string firstName, Gender gender, string? phoneNumber, Address? address,Guid? Id=null,string?bio=null)

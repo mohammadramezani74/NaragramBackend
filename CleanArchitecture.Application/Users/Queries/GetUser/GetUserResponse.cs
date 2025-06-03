@@ -19,6 +19,10 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public string Age { get; set; } = null!;
         public string? Avatar { get; set; } 
         public Address Address { get; set; } = null!;
+        public string?  LastReceivedMessage { get; set; }
+        public string? LastReceivedMessageSendDate { get; set; }
+        public Guid? LastReceivedMessageId { get; set; }
+        public bool IsLastReceivedMessageForMe { get; set; }
 
     }
 

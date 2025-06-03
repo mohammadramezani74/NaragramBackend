@@ -18,6 +18,8 @@ namespace CleanArchitecture.Application.Hubs.Models
         public DateTime SendAt { get; set; }
         public int Type { get; set; } = 0;
         public ChatFilesDto? FileContent { get; set; }
+        public float? Latitude { get; set; }
+        public float? Longitude { get; set; }
     }
     
 }

@@ -1,6 +1,7 @@
 ﻿
 using CleanArchitecture.Application.Chats.Conversations.Command.CreateGroupConverSation;
 using CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivateConversation;
+using CleanArchitecture.Application.Chats.Conversations.Command.Notifications;
 using CleanArchitecture.Application.Chats.Conversations.Command.ProccessProfileImage;
 using CleanArchitecture.Application.Chats.Conversations.Query;
 using MediatR;
@@ -38,7 +39,21 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.Conversations
                 var result = await sender.Send(command);
                 return Results.Ok(result);
             });
-            
+            app.MapPost("/sendNotif", async ([FromServices] ISender sender
+       , [FromBody] NotificationCommand command) =>
+            {
+
+                var result = await sender.Send(command);
+                return Results.Ok(result);
+            });
+            app.MapPost("/StoreFCMToken", async ([FromServices] ISender sender
+, [FromBody] StoreNotificationCommand command) =>
+            {
+
+                var result = await sender.Send(command);
+                return Results.Ok(result);
+            });
+
             app.MapPost("{myid:guid}/{otherid}/ProcessImage", async ([FromServices] ISender sender
        , [FromRoute] Guid myid,
        [FromRoute] Guid? otherid
