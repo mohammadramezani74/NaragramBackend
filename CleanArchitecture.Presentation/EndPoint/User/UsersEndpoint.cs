@@ -9,6 +9,7 @@ using CleanArchitecture.Application.Users.Commands.SendValdateCode;
 using CleanArchitecture.Application.Users.Commands.UploadAvatar;
 using CleanArchitecture.Application.Users.Queries.ExportUser;
 using CleanArchitecture.Application.Users.Queries.GetUser;
+using CleanArchitecture.Application.Users.Queries.GetUserAvatar;
 using CleanArchitecture.Application.Users.Queries.GetUserInfoQuery;
 using CleanArchitecture.Presentation.Extensions;
 using MediatR;
@@ -105,6 +106,13 @@ public sealed class UsersEndpoint:IEndpoint
 
 
         }).RequireAuthorization();
+        app.MapGet("getavatar", async ([FromServices] ISender Mediatr,
+[FromQuery] Guid id, CancellationToken cancellationToken) =>
+        {
+            var result = await Mediatr.Send(new GetUserAvatarQuery(id), cancellationToken);
+            return Results.Ok(result);
+        }).RequireAuthorization();
+        
 
     }
 

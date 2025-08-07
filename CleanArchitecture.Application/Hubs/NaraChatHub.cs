@@ -31,7 +31,7 @@ namespace CleanArchitecture.Application.Hubs
             var token = Context.GetHttpContext().Request.Query.FirstOrDefault(x =>
             x.Key == "access_token");
             var existUser = Context.User.Identity.IsAuthenticated;
-
+ 
 
 #else
     try
@@ -152,12 +152,20 @@ namespace CleanArchitecture.Application.Hubs
         {
             if (_onlineUsers.ContainsKey(messagesForSeen.UserId))
             {
-                var unseendMessages= await _uow.Messages.Where(x=>messagesForSeen.messageId.Contains(x.Id)).ToListAsync();
-                if (unseendMessages.Count > 0) 
-                //{ unseendMessages.ForEach(x => x.MarkMessageAsSeen());
-                //   await _uow.SaveChangesAsync();
-                //}
+                var exists = await _uow.Messages
+                    .AnyAsync(x => messagesForSeen.messageId.Contains(x.Id));
+                if (exists)
+                {
                 await Clients.User(messagesForSeen.UserId.ToString()).MessagedSeenReceived(messagesForSeen.messageId);
+                var conversation=await _uow.Conversation.Include(x=>x.Users.Where(x=>x.ConversationId==messagesForSeen.ConversationId))
+                        .FirstOrDefaultAsync(x=>x.Id==messagesForSeen.ConversationId);
+                    if(conversation != null)
+                    {
+                        var user= conversation.Users.Where(x=>x.UserId==messagesForSeen.MyId).FirstOrDefault();
+                        user.EmptyCount();
+                        await _uow.SaveChangesAsync();
+                    }
+                }
             }
         }
         public async Task SetUserOffline(UserDto user)
@@ -174,6 +182,11 @@ namespace CleanArchitecture.Application.Hubs
         public async Task TypingReaction(TypingReactionDto reaction)
         {
             await Clients.User(reaction.UserId.ToString()).ReceivedReactions(new TypingReactionDto(reaction.MyUserId, reaction.UserId, reaction.MessageType));
+
+        }
+        public async Task BlockedUser(BlockDto block)
+        {
+            await Clients.User(block.UserId.ToString()).BlockUser(new BlockDto(block.UserId,block.IsBlocked));
 
         }
         public async Task ReceiveReaction(MessageReactionDto reactionDto)

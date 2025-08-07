@@ -47,6 +47,7 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
                 .Include(x=>x.Users)
                                                                .SingleOrDefaultAsync
                                                                (x=>x.Id==request.ConversationId,cancellationToken);
+           
             if (conversation == null)
                 return OperationResult.Failure<Guid>( op.Failed("مکالمه مورد نظر یافت نشد!"));
             if (!conversation.Users.Any(x => x.UserId == MyId))
@@ -57,7 +58,16 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
 
             var message = conversation.AddMessage(request.Message,Myuser!,request.ParentId,latitude:request.latitude,
                 Longitude:request.Longitude,type:(MessageType) type);
-              var result=  await _uow.SaveChangesAsync(cancellationToken);
+            var lastmessage= message.Content;
+            conversation.LastMessageText = message.MessageType==MessageType.Text
+                     ? (message.Content.Length > 30 ? message.Content.Substring(0, 30) + "..." : message.Content)
+     : (GetMessageFormat(message.MessageType).Length > 30 ? "..." + GetMessageFormat(message.MessageType).Substring(0, 30) : GetMessageFormat(message.MessageType));
+            conversation.LastMessageId = message.Id;
+            conversation.LastUserSenderMessageId=MyId;
+            conversation.LastMessageSentAt = message.CreateDate;
+            var otheruser= conversation.Users.Where(x=>x.UserId!=MyId).First();
+            otheruser.IncreaseCount();
+            var result=  await _uow.SaveChangesAsync(cancellationToken);
             var hostName = _httpContext.HttpContext.Request.Host.Value;
             var scheme = _httpContext.HttpContext.Request.Scheme;
           
@@ -103,6 +113,18 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
       
             return message.Id;
 
+        }
+        private static string GetMessageFormat(MessageType messageType)
+        {
+            string Messagetype = messageType switch
+            {
+                MessageType.Video => "پیام ویدیویی",
+                MessageType.Audio => "پیام صوتی",
+                MessageType.Image => "پیام تصویری",
+                MessageType.Document => "پیام  اسنادی",
+                MessageType.Location => "لوکیشن"
+            };
+            return Messagetype;
         }
         public static string SetAvatar(User x, string hostName, string scheme)
         {

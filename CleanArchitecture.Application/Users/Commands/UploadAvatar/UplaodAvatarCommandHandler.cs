@@ -36,8 +36,8 @@ namespace CleanArchitecture.Application.Users.Commands.UploadAvatar
             
                 var extension=Path.GetExtension(request.file.FileName);
                 var image = await ImageExtensions.ConvertFormFileToImage(request.file);
-                int thumbnail_Width = (int)Math.Floor(image.Width * 0.05);
-                int thumbnail_Height = (int)Math.Floor(image.Height * 0.05);
+                int thumbnail_Width = 150;
+                int thumbnail_Height = (int)(image.Height * (150.0 / image.Width));
                 var thumbnailImage = await request.file.GetReducedImage(thumbnail_Width > 165 ? 165 : thumbnail_Width, thumbnail_Height > 165 ? 165 : thumbnail_Height);
                 var ms = new MemoryStream();
                 thumbnailImage.Save(ms, new BmpEncoder());

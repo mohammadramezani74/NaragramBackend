@@ -84,16 +84,20 @@ namespace CleanArchitecture.Application.Chats.Messages
 
                 var myId = _userManager.UserId!.Value;
                 var usersOfconversation = await _uow.Conversation
-              .AsNoTracking().Include(x => x.Users)
-              .Where(x => x.Id == request.ConversationId).SelectMany(x => x.Users).ToListAsync();
-                var otherId = usersOfconversation.Where(x => x.UserId != myId).Select(x => x.UserId).First();
-                var otherOnreadMessages = _uow.Messages.Where(x => x.Seen == false && x.CreatedByUserId == otherId&&x.ConversationId==request.ConversationId).ToList();
-                if (myId == otherId) { otherOnreadMessages = new List<Message>(); }
-                if (otherOnreadMessages.Count > 0)
+              .Include(x => x.Users)
+              .Where(x => x.Id == request.ConversationId).FirstOrDefaultAsync();
+                var users= usersOfconversation?.Users ;
+                var otheruser = users.Where(x => x.UserId != myId).First();
+          var myUser= users.Where(x=>x.UserId==myId).First();
+                if (myUser.UnreadCount > 0)
                 {
+                    var otherOnreadMessages = _uow.Messages.Where(x => x.Seen == false && x.CreatedByUserId == otheruser.UserId && x.ConversationId == request.ConversationId).ToList();
+                    if (myId == otheruser.UserId) { otherOnreadMessages = new List<Message>(); }
+                    myUser.EmptyCount();
+                    if (otherOnreadMessages.Any() ) {
                     var messagesIds = otherOnreadMessages.Select(x => x.Id).ToList();
                     var otheruserId = otherOnreadMessages.First().CreatedByUserId;
-                    var messageSeendto = new MessageSeenDto(messagesIds, otheruserId.Value);
+                    var messageSeendto = new MessageSeenDto(messagesIds, otheruserId.Value, usersOfconversation.Id,myId);
                     try
                     {
                         await _hubContext.Clients.User(otheruserId.ToString()).MessagedSeenReceived(messagesIds);
@@ -106,7 +110,7 @@ namespace CleanArchitecture.Application.Chats.Messages
       
 
            
-                    otherOnreadMessages.ForEach(x => x.MarkMessageAsSeen());
+                    otherOnreadMessages.ForEach(x => x.MarkMessageAsSeen()); }
                     await _uow.SaveChangesAsync();
                 }
 

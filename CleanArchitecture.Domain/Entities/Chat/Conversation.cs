@@ -10,8 +10,13 @@ namespace CleanArchitecture.Domain.Entities.Chat
     {
         public string Title { get; private set; } = string.Empty;
         public bool IsPrivate { get; private set; }
+
         public ICollection<Message> Messages { get; private set; }
         public ICollection<ConversationUser> Users { get;private set; }
+        public string? LastMessageText { get; set; }
+        public DateTime? LastMessageSentAt { get; set; }
+        public Guid? LastMessageId { get; set; }
+        public Guid? LastUserSenderMessageId  { get; set; }
 
         public void AddUser(User user)
         {

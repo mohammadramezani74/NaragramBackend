@@ -27,7 +27,6 @@ namespace CleanArchitecture.Application.Chats.Conversations.Query
             config.NewConfig<ConversationUser, UserViewModel>()
 
                .Map(x=>x.Name, s =>string.Concat( s.User.LastName," ", s.User.FirsName))
-
        .Map(dest => dest.Avatar, src =>
         src.User != null && src.User.UserAvatars.Count>10
             ? Convert.ToBase64String(src.User.UserAvatars.First().FileData)

@@ -1,7 +1,9 @@
 ﻿
+using CleanArchitecture.Application.Chats.Conversations.Command.BlockConversation;
 using CleanArchitecture.Application.Chats.Conversations.Command.CreateGroupConverSation;
 using CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivateConversation;
 using CleanArchitecture.Application.Chats.Conversations.Command.Notifications;
+using CleanArchitecture.Application.Chats.Conversations.Command.PinConversation;
 using CleanArchitecture.Application.Chats.Conversations.Command.ProccessProfileImage;
 using CleanArchitecture.Application.Chats.Conversations.Query;
 using MediatR;
@@ -34,6 +36,20 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.Conversations
             });
             app.MapPost("/CreateGroupConversation", async ([FromServices] ISender sender
             , [FromBody] CreateGroupConversationCommand command) =>
+            {
+
+                var result = await sender.Send(command);
+                return Results.Ok(result);
+            });
+            app.MapPost("/PinConversation", async ([FromServices] ISender sender
+     , [FromBody] PinConversationCommand command) =>
+            {
+
+                var result = await sender.Send(command);
+                return Results.Ok(result);
+            });
+            app.MapPost("/BlockConversation", async ([FromServices] ISender sender
+, [FromBody] BlockConversationCommand command) =>
             {
 
                 var result = await sender.Send(command);

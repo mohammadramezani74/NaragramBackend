@@ -23,6 +23,7 @@ namespace CleanArchitecture.Domain.Entities.Identity
         public Address? Address { get; private set; }
         public Gender Gender { get; private set; }
         public bool IsActive { get; private set; }
+        public bool IsDoNotDisturb { get; private set; }
         public DateTimeOffset? LastLoginDate { get; private set; }
         public virtual ICollection<RefreshToken> RefreshTokens { get; internal set; } = new List<RefreshToken>();
         public virtual ICollection<UserAvatar> UserAvatars { get; internal set; } = new List<UserAvatar>();
@@ -46,6 +47,7 @@ namespace CleanArchitecture.Domain.Entities.Identity
             LockoutEnabled = false;
             AccessFailedCount = 7;
             IsActive = true;
+            IsDoNotDisturb = false;
             this.bio = bio;
             if (address is not null)
             {
@@ -91,6 +93,10 @@ namespace CleanArchitecture.Domain.Entities.Identity
        bio
 
     );
+        public void SetDoNotDisturb(bool isDoNotDisturb)
+        {
+            IsDoNotDisturb = isDoNotDisturb;
+        }
         public User AddRefreshToken(RefreshToken refreshToken)
         {
             RefreshTokens.Add( refreshToken );

@@ -14,6 +14,7 @@ internal sealed class ConversationMapping : IEntityTypeConfiguration<Conversatio
 
 
         builder.HasKey(c => c.Id);
+        builder.Property(x => x.LastMessageText).HasMaxLength(100);
         builder.Property(x => x.Title).IsRequired().HasMaxLength(500);
         builder.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.ModifiedBy).WithMany().HasForeignKey(x => x.ModifiedById).OnDelete(DeleteBehavior.Restrict);

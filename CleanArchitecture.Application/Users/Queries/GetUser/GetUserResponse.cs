@@ -23,6 +23,9 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public string? LastReceivedMessageSendDate { get; set; }
         public Guid? LastReceivedMessageId { get; set; }
         public bool IsLastReceivedMessageForMe { get; set; }
+        public bool IsPin { get; set; }
+        public bool IsBlocked { get; set; }
+        public bool OtherUserBlocked { get; set; }
 
     }
 

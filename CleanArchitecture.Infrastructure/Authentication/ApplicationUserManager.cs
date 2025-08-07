@@ -10,6 +10,7 @@ using CleanArchitecture.Application.Hubs;
 using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Users.Commands.CreateUser;
 using CleanArchitecture.Application.Users.Queries.GetUser;
+using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Enums;
 using CleanArchitecture.Domain.ValueObjects;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -130,7 +132,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
 
     }
 
-    public async Task<List<GetUserResponse>> GetUsers(GetUserQuery getUser, CancellationToken cancellationToken = default)
+    public async Task<List<GetUserResponse>> GetUsers2(GetUserQuery getUser, CancellationToken cancellationToken = default)
     {
         var userList=new List<GetUserResponse>();
         var userId = _httpContextAccessor
@@ -231,6 +233,77 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
 
         return userList.Union(userswithoutConversation).ToList();
     }
+    public async Task<List<GetUserResponse>> GetUsers(GetUserQuery getUser, CancellationToken cancellationToken = default)
+    {
+        var userId = _httpContextAccessor
+            .HttpContext?
+            .User
+            .GetUserId();
+        var response = new List<GetUserResponse>();
+        var sw = Stopwatch.StartNew();
+        var conversationsOfUser = await _unitOfWork.Conversation.AsNoTracking()
+            .Include(x => x.Users)
+            .ThenInclude(x => x.User)
+            .ThenInclude(x=>x.UserAvatars.Where(x=>x.UserId!=userId))
+            .Where(x => x.Users.Any(x => x.UserId == userId))
+ 
+            .ToListAsync();
+        sw.Stop();
+        Console.WriteLine($"EF Execution time: {sw.ElapsedMilliseconds} ms");
+        foreach (var conversation in conversationsOfUser)
+        {
+            var OtherUser = conversation.Users.Where(u => u.UserId != userId).Select(u => u.User).FirstOrDefault();
+            var CurrentUser = conversation.Users.Where(u => u.UserId == userId).FirstOrDefault();
+            var OtherconversationUser= conversation.Users.Where(u => u.UserId != userId).FirstOrDefault();
+            if (OtherUser != null) {
+                var newuser= new GetUserResponse
+
+                {
+                    Id = OtherUser.Id,
+                    ConversationId = conversation.Id,
+                    MessageUnreadedCount = CurrentUser?.UnreadCount??0,
+                    LastSeen = OtherUser.LastLoginDate?.DateTime,
+                    FirstName = OtherUser.FirsName!,
+                    LastName = OtherUser.LastName!,
+                    UserName = OtherUser.UserName!,
+                    Avatar = SetAvatar(OtherUser),
+                    LastReceivedMessage = conversation.LastMessageText,
+                    LastReceivedMessageId = conversation.LastMessageId,
+                    IsLastReceivedMessageForMe = conversation.LastUserSenderMessageId == userId,
+                    LastReceivedMessageSendDate = conversation.LastMessageSentAt?.FormatPersianDate().ToPersianNumber() ?? string.Empty,
+                    IsPin=CurrentUser.IsPinned,
+                    IsBlocked=CurrentUser.IsBlocked,
+                    OtherUserBlocked= OtherconversationUser.IsBlocked
+                };
+                response.Add(newuser);
+            }
+        }
+
+        var userIdsWithConversation = response.Select(x => x.Id).ToList();
+
+        var userswithoutConversation = await _unitOfWork.Users.Include(x => x.UserAvatars)
+            .AsNoTracking().Where(u => !userIdsWithConversation.Contains(u.Id)
+            && u.Id != userId)
+            .Select(x => new GetUserResponse
+            {
+                Id = x.Id,
+                Address = x.Address,
+                Age = x.Age.ToString(),
+                FirstName = x.FirsName!,
+                LastName = x.LastName!,
+                UserName = x.UserName!,
+                Avatar = SetAvatar(x)
+            })
+            .ToListAsync();
+
+
+        return response.Union(userswithoutConversation)
+             .OrderByDescending(x => x.IsPin)
+            .OrderByDescending(x=>x.LastReceivedMessageSendDate)
+            .ThenByDescending(x=>x.Avatar!=null)
+            .ThenByDescending(x=>x.ConversationId!=Guid.Empty)
+            .ToList();
+    }
 
 
     private static string GetMessageFormat(MessageType messageType)
@@ -275,7 +348,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
     public static string? SetAvatar(User x)
     {
         
-      var thumbnail=  x.UserAvatars?.FirstOrDefault()?.FileData??null;
+      var thumbnail=  x.UserAvatars?.FirstOrDefault()?.Thumbnail??null;
         if (thumbnail != null) {
            return Convert.ToBase64String(thumbnail);
         }

@@ -23,6 +23,7 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
         Task ReceivedNotifications(NotificationModelDto notify);
         Task SetLastSeenUser(LastSeenModelDto lastSeenModel);
         Task ReceivedReactions(TypingReactionDto MessageType);
+        Task BlockUser(BlockDto blockDto);
         Task ReceivedEmojiReact(MessageReactionDto reaction);
         Task GetMissedMessages(List<ChatMessageDto> messages);
     }
