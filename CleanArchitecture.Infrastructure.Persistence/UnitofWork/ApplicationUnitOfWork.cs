@@ -32,7 +32,6 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
             }
             catch (DbUpdateConcurrencyException e)
             {
-           
                 return Result.Failure(e.Message);
             }
             catch (DbUpdateException e)

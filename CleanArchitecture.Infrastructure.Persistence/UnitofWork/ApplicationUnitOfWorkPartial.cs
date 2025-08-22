@@ -1,13 +1,9 @@
-﻿using CleanArchitecture.Domain.Entities.Chat;
+﻿using CleanArchitecture.Domain.Entities.ChannelsAgg;
+using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Entities.ToDoItems;
 using CleanArchitecture.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
 {
@@ -23,5 +19,10 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<UserAvatar> UserAvatars => _context.Set<UserAvatar>();
         public DbSet<MessageReaction> MessageReactions => _context.Set<MessageReaction>();
         public DbSet<FireBaseToken> FireBaseTokens =>_context.Set<FireBaseToken>();
+        public DbSet<Channel> Channels => _context.Set<Channel>();
+        public DbSet<ChannelMember> ChannelMembers => _context.Set<ChannelMember>();
+        public DbSet<ChannelAdmin> ChannelAdmins => _context.Set<ChannelAdmin>();
+        public DbSet<ChannelMessageSeen> ChannelMessageSeens => _context.Set<ChannelMessageSeen>();
+        public DbSet<ChannelInvite> ChannelInvites => _context.Set<ChannelInvite>();
     }
 }

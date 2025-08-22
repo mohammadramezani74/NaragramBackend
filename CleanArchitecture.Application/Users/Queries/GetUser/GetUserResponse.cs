@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Domain.ValueObjects;
+﻿using CleanArchitecture.Application.Common.Models;
+using CleanArchitecture.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,8 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public bool IsPin { get; set; }
         public bool IsBlocked { get; set; }
         public bool OtherUserBlocked { get; set; }
+        public bool IsChannel { get; set; }
+        public ChannelDto? channel { get; set; } = null;
 
     }
 

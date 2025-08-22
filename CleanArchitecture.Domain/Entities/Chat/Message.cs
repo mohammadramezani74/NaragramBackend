@@ -1,4 +1,5 @@
 ﻿using CleanArchitecture.Domain.Common;
+using CleanArchitecture.Domain.Entities.ChannelsAgg;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Enums;
 using System;
@@ -12,13 +13,15 @@ namespace CleanArchitecture.Domain.Entities.Chat
 {
     public sealed class Message:BaseEntity
     {
-        public Conversation Conversation { get; internal set; }
-        public Guid ConversationId { get; internal set; }
+        public Conversation? Conversation { get; internal set; }
+        public Guid? ConversationId { get; internal set; }
         public string Content { get; internal set; } = null!;
         public bool Seen { get; internal set; }
         public MessageType MessageType { get; internal set; }
         public float? Latitude { get; set; }
         public float? Longitude { get; set; }
+        public Guid? ChannelId { get; set; }
+        public Channel? Channel { get; set; }
 
         public Guid? ParentMessageId { get; set; }
         public Message? ParentMessage { get; internal set; }
@@ -41,6 +44,28 @@ namespace CleanArchitecture.Domain.Entities.Chat
             }
             Reactions.Add(reaction);
         }
+        public static Message AddForChannelMessage(string message,Guid ChannelId, Guid user, Guid? ParrentId = null, List<ChatFiles>? files = null, MessageType type = MessageType.Text)
+        {
 
+            var Message =
+              new Message
+              {
+                  Id = Guid.NewGuid(),
+                  Content = message,
+                  CreateDate = DateTime.Now,
+                  CreatedByUserId = user,
+                  ParentMessageId = ParrentId,
+                  ChatFiles = files,
+                  MessageType = type,
+                  ChannelId = ChannelId,
+              };
+
+
+
+            return Message;
+
+
+
+        }
     }
 }

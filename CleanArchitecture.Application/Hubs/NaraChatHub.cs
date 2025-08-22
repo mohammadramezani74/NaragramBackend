@@ -3,15 +3,12 @@ using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
 using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Hubs.Models;
-using CleanArchitecture.Domain.Entities.Identity;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
+using System.Security.Claims;
 
 
 namespace CleanArchitecture.Application.Hubs
@@ -31,10 +28,24 @@ namespace CleanArchitecture.Application.Hubs
             var token = Context.GetHttpContext().Request.Query.FirstOrDefault(x =>
             x.Key == "access_token");
             var existUser = Context.User.Identity.IsAuthenticated;
- 
+            var userIdClaim = Context.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (userIdClaim != null)
+            {
+                var userId = userIdClaim.Value;
+                var channelIds = await _uow.Channels
+                 .Where(cu => cu.Members.Any(x => x.UserId ==Guid.Parse(userId)))
+                 .Select(cu => cu.Id)
+                 .ToListAsync();
+
+                foreach (var channelId in channelIds)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, channelId.ToString());
+                }
+            }
+
 
 #else
-    try
+            try
             {
 
 
@@ -46,6 +57,17 @@ namespace CleanArchitecture.Application.Hubs
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var jwtToken = tokenHandler.ReadJwtToken(validtoken);
               var userId=  jwtToken.Claims.Where(x => x.Type == "sub").First().Value;
+                if (userId != null) {
+                    var channelIds = await _uow.Channels
+                 .Where(cu => cu.Members.Any(x => x.UserId == Guid.Parse(userId)))
+                 .Select(cu => cu.Id)
+                 .ToListAsync();
+
+                    foreach (var channelId in channelIds)
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, channelId.ToString());
+                    }
+                }
                 _loger.LogWarning($"UserId Id {userId}");
                 await SetUserOnline(new UserDto(Guid.Parse(userId),string.Empty));
 
@@ -53,7 +75,6 @@ namespace CleanArchitecture.Application.Hubs
             catch (Exception ex)
             {
                 _loger.LogError($"Context.GetHttpContext() is not found");
-
             }
 #endif
 

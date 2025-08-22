@@ -39,6 +39,12 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
                 .WithMany()
                 .HasForeignKey(m => m.ModifiedById)
                 .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(m => m.Channel)
+                    .WithMany()
+                    .HasForeignKey(m => m.ChannelId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            builder.HasIndex(m => new { m.ChannelId, m.CreateDate });
+            builder.HasIndex(m => new { m.ConversationId, m.CreateDate });
 
             builder.HasOne(m => m.ParentMessage)
                     .WithMany(m => m.Replies)

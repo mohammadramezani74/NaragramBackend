@@ -10,6 +10,7 @@ using CleanArchitecture.Application.Hubs;
 using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Users.Commands.CreateUser;
 using CleanArchitecture.Application.Users.Queries.GetUser;
+using CleanArchitecture.Domain.Entities.ChannelsAgg;
 using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Enums;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -151,12 +153,12 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         var conversationIds = conversationsOfUser.Select(c => c.Id).ToList();
 
         var unreadMessages = await _unitOfWork.Messages.AsNoTracking()
-            .Where(x => conversationIds.Contains(x.ConversationId) && !x.Seen
+            .Where(x => conversationIds.Contains(x.ConversationId.Value) && !x.Seen
             &&x.CreatedByUserId!=userId)
             .ToListAsync(cancellationToken);
 
         var lastMessages = _unitOfWork.Messages
-           .Where(m => conversationIds.Contains(m.ConversationId))
+           .Where(m => conversationIds.Contains(m.ConversationId.Value))
            .GroupBy(m => m.ConversationId)
            .Select(g => g
                .OrderByDescending(m => m.CreateDate)
@@ -235,12 +237,16 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
     }
     public async Task<List<GetUserResponse>> GetUsers(GetUserQuery getUser, CancellationToken cancellationToken = default)
     {
+        try
+        {
+
+    
         var userId = _httpContextAccessor
             .HttpContext?
             .User
             .GetUserId();
         var response = new List<GetUserResponse>();
-        var sw = Stopwatch.StartNew();
+
         var conversationsOfUser = await _unitOfWork.Conversation.AsNoTracking()
             .Include(x => x.Users)
             .ThenInclude(x => x.User)
@@ -248,8 +254,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             .Where(x => x.Users.Any(x => x.UserId == userId))
  
             .ToListAsync();
-        sw.Stop();
-        Console.WriteLine($"EF Execution time: {sw.ElapsedMilliseconds} ms");
+
         foreach (var conversation in conversationsOfUser)
         {
             var OtherUser = conversation.Users.Where(u => u.UserId != userId).Select(u => u.User).FirstOrDefault();
@@ -295,16 +300,80 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 Avatar = SetAvatar(x)
             })
             .ToListAsync();
+            var channelsquery = await _unitOfWork.Channels
+                .Include(x => x.Members)
+                .Include(x => x.CreatedByUser)
+                .Include(x => x.Admins).ThenInclude(x => x.User)
 
+            .Where(x => x.Members.Any(x => x.UserId == userId))
+          .ToListAsync(cancellationToken);
+            var channels= channelsquery
+        .Select(x=>new GetUserResponse
+        {
+            Id=x.Id,
+            FirstName=x.Title,
+            UserName=x.UserName,
+            LastReceivedMessage=x.LastMessageText,
+            LastReceivedMessageId = x.LastMessageId,
+            IsLastReceivedMessageForMe = false,
+            LastReceivedMessageSendDate = CreateDateTime(x.LastMessageSentAt) ,
+            IsChannel=true,
+            channel=new ChannelDto
+            {
+                Creator=x.CreatedByUser.LastName+" "+x.CreatedByUser.FirsName,
+               CreatorId=x.CreatedByUserId.Value,
+                admins=GetAdmins(x.Admins,x.CreatedByUserId),
+                CurrentUserAdmin = IsUserAdmin(x, userId.Value)
+            }
+            
+        })
+        .ToList();
 
         return response.Union(userswithoutConversation)
+            .Union(channels)
              .OrderByDescending(x => x.IsPin)
-            .OrderByDescending(x=>x.LastReceivedMessageSendDate)
+            .ThenByDescending(x=>x.LastReceivedMessageSendDate)
             .ThenByDescending(x=>x.Avatar!=null)
             .ThenByDescending(x=>x.ConversationId!=Guid.Empty)
             .ToList();
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
     }
 
+    private static bool IsUserAdmin(Channel x,Guid userId)
+    {
+      if( x.CreatedByUserId== userId)
+            return true;
+      else if(x.Admins.Any(x=>x.UserId== userId))
+        {
+            return true;
+        }
+      return false;
+    }
+
+    private static List<UserChannelDto> GetAdmins(IReadOnlyCollection<ChannelAdmin> admins,Guid? CreatorId)
+    {
+      var list= new List<UserChannelDto>();
+        foreach (var admin in admins.Where(x=>x.UserId!=CreatorId).ToList())
+        {
+            list.Add(new UserChannelDto
+            {
+                Id = admin.UserId,
+                IsAdmin = true,
+                Name = admin.User.FirsName + " " + admin.User.LastName
+            });
+        }
+        return list;
+    }
+
+    private static string CreateDateTime(DateTime? lastMessageSentAt)
+    {
+       return lastMessageSentAt?.FormatPersianDate().ToPersianNumber() ?? "";
+    }
 
     private static string GetMessageFormat(MessageType messageType)
     {

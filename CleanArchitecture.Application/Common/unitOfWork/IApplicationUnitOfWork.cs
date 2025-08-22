@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Domain.Entities.Chat;
+﻿using CleanArchitecture.Domain.Entities.ChannelsAgg;
+using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Entities.ToDoItems;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,11 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<UserAvatar> UserAvatars { get; }
         public DbSet<MessageReaction> MessageReactions { get; }
         public DbSet<FireBaseToken> FireBaseTokens { get; }
+        public DbSet<Channel> Channels { get; }
+        public DbSet<ChannelMember> ChannelMembers { get; }
+        public DbSet<ChannelAdmin> ChannelAdmins { get; }
+        public DbSet<ChannelMessageSeen> ChannelMessageSeens { get; }
+        public DbSet<ChannelInvite> ChannelInvites  { get; }
 
-    }
+}
 }
