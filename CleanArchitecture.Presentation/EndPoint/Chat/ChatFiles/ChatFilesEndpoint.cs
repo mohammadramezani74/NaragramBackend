@@ -1,5 +1,6 @@
 ﻿
 using CleanArchitecture.Application.Chats.FileMessages.Query;
+using CleanArchitecture.Application.Users.Queries.GetAvatar;
 using CleanArchitecture.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,23 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
                 }
 
             });
+
+            app.MapGet("/{fileid:guid:required}/{ischannel:bool}/getAvatar", async ([FromServices] ISender sender
+     , [FromRoute] Guid fileid, [FromRoute] bool ischannel) =>
+            {
+
+                var result = await sender.Send(new AvatarIdQuery(fileid, ischannel));
+                if (!result.IsSucceded )
+                {
+                    return Results.NotFound();
+                }
+                else
+                {
+                    return Results.File(result.result.Bytes, result.result.Name);
+                    
+                }
+
+            }).AllowAnonymous();
         }
     }
 }

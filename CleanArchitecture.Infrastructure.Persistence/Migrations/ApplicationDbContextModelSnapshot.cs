@@ -167,6 +167,73 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.ToTable("ChannelAdmin");
                 });
 
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.ChannelAvatar", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Extension")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar");
+
+                    b.Property<byte[]>("FileData")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar");
+
+                    b.Property<decimal>("FileSize")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ModifiedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ModifiedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Thumbnail")
+                        .HasColumnType("varbinary(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ModifiedById");
+
+                    b.ToTable("ChannelAvatars", (string)null);
+                });
+
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.ChannelInvite", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1169,6 +1236,31 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.ChannelAvatar", b =>
+                {
+                    b.HasOne("CleanArchitecture.Domain.Entities.ChannelsAgg.Channel", "Channel")
+                        .WithMany("ChannelAvatars")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Channel");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("ModifiedBy");
+                });
+
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.ChannelInvite", b =>
                 {
                     b.HasOne("CleanArchitecture.Domain.Entities.ChannelsAgg.Channel", "Channel")
@@ -1615,6 +1707,8 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.Channel", b =>
                 {
                     b.Navigation("Admins");
+
+                    b.Navigation("ChannelAvatars");
 
                     b.Navigation("Invites");
 

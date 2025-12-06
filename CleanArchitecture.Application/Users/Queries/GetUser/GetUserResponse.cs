@@ -29,6 +29,7 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public bool OtherUserBlocked { get; set; }
         public bool IsChannel { get; set; }
         public ChannelDto? channel { get; set; } = null;
+        public DateTime? LastMessageDate { get; set; }
 
     }
 

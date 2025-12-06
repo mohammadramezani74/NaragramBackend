@@ -26,18 +26,28 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ModifiedMessage
         public async Task<OperationResult> Handle(ModifiedMessageCommand request, CancellationToken cancellationToken)
         {
             var myId= _userManager.UserId!.Value;
-           await _uow.Messages.Where(x=>x.Id==request.MessageId)
+            var message = await _uow.Messages.Where(x => x.Id == request.MessageId).FirstOrDefaultAsync(cancellationToken);
+    
+            await _uow.Messages.Where(x=>x.Id==request.MessageId)
         .ExecuteUpdateAsync(p => p
         .SetProperty(x => x.Content, request.Message)
         .SetProperty(x => x.ModifiedDate, DateTime.Now)
         .SetProperty(x => x.ModifiedById, myId)
+
     );
      
       
             await _uow.SaveChangesAsync();
-            var editedMessage = new EditedMessageDto(request.MessageId, request.Message);
-            await _hubContext.Clients.User(request.OtherUserId.ToString()).EditedMessageReceived(editedMessage);
-            return new OperationResult().succedded(); ;
+            if (message?.ChannelId is null)
+            {
+                var editedMessage = new EditedMessageDto(request.MessageId, request.Message, null);
+                await _hubContext.Clients.User(request.OtherUserId.ToString()).EditedMessageReceived(editedMessage);
+            }
+            else {
+                var editedMessage = new EditedMessageDto(request.MessageId, request.Message, message.ChannelId);
+                await _hubContext.Clients.Group(message.ChannelId.ToString()).EditedMessageReceived(editedMessage);
+            }
+                return new OperationResult().succedded(); ;
         }
     }
 }

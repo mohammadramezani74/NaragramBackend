@@ -3,6 +3,7 @@
     public sealed record EditedMessageDto
    (
        Guid Id ,
-         string Message );
+         string Message,
+         Guid? ChannelId);
     
 }

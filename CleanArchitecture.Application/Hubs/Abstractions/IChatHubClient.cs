@@ -1,6 +1,7 @@
 ﻿using CleanArchitecture.Application.Chats.Messages.Command.DeleteMessage;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Hubs.Models;
+using CleanArchitecture.Application.Users.Queries.GetUser;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,5 +27,7 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
         Task BlockUser(BlockDto blockDto);
         Task ReceivedEmojiReact(MessageReactionDto reaction);
         Task GetMissedMessages(List<ChatMessageDto> messages);
+        Task GetDeletedChannel(Guid channelId);
+        Task ReceiveNewChannel(GetUserResponse user);
     }
 }

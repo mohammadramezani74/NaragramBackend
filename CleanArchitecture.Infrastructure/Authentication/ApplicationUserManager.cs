@@ -227,8 +227,8 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 Age = x.Age.ToString(),
                 FirstName = x.FirsName!,
                 LastName = x.LastName!,
-                UserName = x.UserName!,
-                Avatar = SetAvatar(x)
+                //UserName = x.UserName!,
+                //Avatar = SetAvatar(x)
             })
             .ToListAsync();
       
@@ -245,49 +245,56 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             .HttpContext?
             .User
             .GetUserId();
-        var response = new List<GetUserResponse>();
 
-        var conversationsOfUser = await _unitOfWork.Conversation.AsNoTracking()
-            .Include(x => x.Users)
-            .ThenInclude(x => x.User)
-            .ThenInclude(x=>x.UserAvatars.Where(x=>x.UserId!=userId))
-            .Where(x => x.Users.Any(x => x.UserId == userId))
- 
-            .ToListAsync();
+            var response = new List<GetUserResponse>();
 
-        foreach (var conversation in conversationsOfUser)
-        {
-            var OtherUser = conversation.Users.Where(u => u.UserId != userId).Select(u => u.User).FirstOrDefault();
-            var CurrentUser = conversation.Users.Where(u => u.UserId == userId).FirstOrDefault();
-            var OtherconversationUser= conversation.Users.Where(u => u.UserId != userId).FirstOrDefault();
-            if (OtherUser != null) {
-                var newuser= new GetUserResponse
+            var conversationsOfUser = await _unitOfWork.Conversation.AsNoTracking()
+                         .AsSplitQuery()
+                .Include(x => x.Users)
+                .ThenInclude(x => x.User)
+                //.ThenInclude(x => x.UserAvatars.Where(x => x.UserId != userId))
+                .Where(x => x.Users.Any(x => x.UserId == userId))
 
+                .ToListAsync();
+
+            foreach (var conversation in conversationsOfUser)
+            {
+                var OtherUser = conversation.Users.Where(u => u.UserId != userId).Select(u => u.User).FirstOrDefault();
+                var CurrentUser = conversation.Users.Where(u => u.UserId == userId).FirstOrDefault();
+                var OtherconversationUser = conversation.Users.Where(u => u.UserId != userId).FirstOrDefault();
+                if (OtherUser != null)
                 {
-                    Id = OtherUser.Id,
-                    ConversationId = conversation.Id,
-                    MessageUnreadedCount = CurrentUser?.UnreadCount??0,
-                    LastSeen = OtherUser.LastLoginDate?.DateTime,
-                    FirstName = OtherUser.FirsName!,
-                    LastName = OtherUser.LastName!,
-                    UserName = OtherUser.UserName!,
-                    Avatar = SetAvatar(OtherUser),
-                    LastReceivedMessage = conversation.LastMessageText,
-                    LastReceivedMessageId = conversation.LastMessageId,
-                    IsLastReceivedMessageForMe = conversation.LastUserSenderMessageId == userId,
-                    LastReceivedMessageSendDate = conversation.LastMessageSentAt?.FormatPersianDate().ToPersianNumber() ?? string.Empty,
-                    IsPin=CurrentUser.IsPinned,
-                    IsBlocked=CurrentUser.IsBlocked,
-                    OtherUserBlocked= OtherconversationUser.IsBlocked
-                };
-                response.Add(newuser);
+                    var newuser = new GetUserResponse
+
+                    {
+                        Id = OtherUser.Id,
+                        ConversationId = conversation.Id,
+                        MessageUnreadedCount = CurrentUser?.UnreadCount ?? 0,
+                        LastSeen = OtherUser.LastLoginDate?.DateTime,
+                        FirstName = OtherUser.FirsName!,
+                        LastName = OtherUser.LastName!,
+                        UserName = OtherUser.UserName!,
+                        Avatar = SetAvatar(OtherUser),
+                        LastReceivedMessage = conversation.LastMessageText,
+                        LastReceivedMessageId = conversation.LastMessageId,
+                        IsLastReceivedMessageForMe = conversation.LastUserSenderMessageId == userId,
+                        LastReceivedMessageSendDate = conversation.LastMessageSentAt?.FormatPersianDate().ToPersianNumber() ?? string.Empty,
+                        LastMessageDate = conversation.LastMessageSentAt,
+                        IsPin = CurrentUser.IsPinned,
+                        IsBlocked = CurrentUser.IsBlocked,
+                        OtherUserBlocked = OtherconversationUser.IsBlocked
+                    };
+                    response.Add(newuser);
+                }
             }
-        }
 
-        var userIdsWithConversation = response.Select(x => x.Id).ToList();
+            var userIdsWithConversation = response.Select(x => x.Id).ToList();
 
-        var userswithoutConversation = await _unitOfWork.Users.Include(x => x.UserAvatars)
-            .AsNoTracking().Where(u => !userIdsWithConversation.Contains(u.Id)
+        var userswithoutConversation = await _unitOfWork.Users
+                      .AsNoTracking()
+                      .AsSplitQuery()
+                //.Include(x => x.UserAvatars)
+            .Where(u => !userIdsWithConversation.Contains(u.Id)
             && u.Id != userId)
             .Select(x => new GetUserResponse
             {
@@ -297,42 +304,50 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 FirstName = x.FirsName!,
                 LastName = x.LastName!,
                 UserName = x.UserName!,
-                Avatar = SetAvatar(x)
+
+                Avatar = SetAvatar(x,false)
             })
             .ToListAsync();
-            var channelsquery = await _unitOfWork.Channels
-                .Include(x => x.Members)
+            var channelsquery = await _unitOfWork.Channels.AsNoTracking()
+                 .AsSplitQuery()
+                .Include(x => x.Members.Where(x => x.UserId == userId))
                 .Include(x => x.CreatedByUser)
+                //.Include(x => x.ChannelAvatars)
                 .Include(x => x.Admins).ThenInclude(x => x.User)
 
             .Where(x => x.Members.Any(x => x.UserId == userId))
           .ToListAsync(cancellationToken);
-            var channels= channelsquery
-        .Select(x=>new GetUserResponse
+            var channels = channelsquery
+        .Select(x => new GetUserResponse
         {
-            Id=x.Id,
-            FirstName=x.Title,
-            UserName=x.UserName,
-            LastReceivedMessage=x.LastMessageText,
+            Id = x.Id,
+            FirstName = x.Title,
+            UserName = x.UserName,
+            LastReceivedMessage = x.LastMessageText,
             LastReceivedMessageId = x.LastMessageId,
             IsLastReceivedMessageForMe = false,
-            LastReceivedMessageSendDate = CreateDateTime(x.LastMessageSentAt) ,
-            IsChannel=true,
-            channel=new ChannelDto
+            MessageUnreadedCount=CalculateCount(x.Members,userId),
+            LastReceivedMessageSendDate = CreateDateTime(x.LastMessageSentAt),
+            LastMessageDate=x.LastMessageSentAt,
+            IsChannel = true,
+            channel = new ChannelDto
             {
-                Creator=x.CreatedByUser.LastName+" "+x.CreatedByUser.FirsName,
-               CreatorId=x.CreatedByUserId.Value,
-                admins=GetAdmins(x.Admins,x.CreatedByUserId),
+                Creator = x.CreatedByUser.LastName + " " + x.CreatedByUser.FirsName,
+                CreatorId = x.CreatedByUserId.Value,
+                admins = GetAdmins(x.Admins, x.CreatedByUserId),
                 CurrentUserAdmin = IsUserAdmin(x, userId.Value)
-            }
-            
+            },
+            Avatar = SetChannelAvatar(x)
+
+
         })
         .ToList();
+         
 
-        return response.Union(userswithoutConversation)
-            .Union(channels)
+            return response.Concat(userswithoutConversation)
+            .Concat(channels)
              .OrderByDescending(x => x.IsPin)
-            .ThenByDescending(x=>x.LastReceivedMessageSendDate)
+            .ThenByDescending(x=>x.LastMessageDate)
             .ThenByDescending(x=>x.Avatar!=null)
             .ThenByDescending(x=>x.ConversationId!=Guid.Empty)
             .ToList();
@@ -342,6 +357,13 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
 
             throw;
         }
+    }
+
+    private static int CalculateCount(ICollection<ChannelMember> members, Guid? userId)
+    {
+        var member = members.Where(x => x.UserId == userId).FirstOrDefault();
+        if (member == null) return 0;
+        return member.UnreadCount;
     }
 
     private static bool IsUserAdmin(Channel x,Guid userId)
@@ -398,7 +420,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.irannara.com/api/v1/Telegram/AuthForChat");
             request.Headers.Add("accept", "*/*");
-            var content = new StringContent($"\"{phoneNumber}\"", null, "application/json-patch+json");
+            var content = new StringContent($"\"{09228242581}\"", null, "application/json-patch+json");
             request.Content = content;
             var response = await client.SendAsync(request);
             if (!response.IsSuccessStatusCode)
@@ -414,14 +436,21 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         return op.succedded();
 
     }
-    public static string? SetAvatar(User x)
+    public static string? SetAvatar(User x,bool ischannel=false)
     {
         
-      var thumbnail=  x.UserAvatars?.FirstOrDefault()?.Thumbnail??null;
-        if (thumbnail != null) {
-           return Convert.ToBase64String(thumbnail);
-        }
+    
+           return $"api/v1/chatfiles/{x.Id}/{ischannel}/getAvatar";
+        
         return null;
+    }
+    public static string? SetChannelAvatar(Channel x)
+    {
+
+   
+      
+            return $"api/v1/chatfiles/{x.Id}/{true}/getAvatar";
+        
     }
 
     public async Task<List<string>> GetUserClaims(Guid userId, CancellationToken cancellationToken = default)

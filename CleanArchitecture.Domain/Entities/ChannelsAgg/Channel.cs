@@ -14,16 +14,16 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
     public sealed class Channel : BaseEntity
     {
         public string Title { get; private set; } = null!;
-        public string Description { get;private set; } = string.Empty;
-        public string UserName { get;private set; } = string.Empty;
-        public bool IsPublic { get;private set; } = false;
+        public string Description { get; private set; } = string.Empty;
+        public string UserName { get; private set; } = string.Empty;
+        public bool IsPublic { get; private set; } = false;
         private readonly List<ChannelAdmin> _admins = new();
-        private readonly List<ChannelMember> _members = new();
         private readonly List<ChannelInvite> _invites = new();
 
-        public IReadOnlyCollection<ChannelAdmin> Admins => _admins.AsReadOnly();
-        public IReadOnlyCollection<ChannelMember> Members => _members.AsReadOnly();
-        public IReadOnlyCollection<ChannelInvite> Invites => _invites.AsReadOnly();
+        public IReadOnlyCollection<ChannelAdmin> Admins  { get; set; }=new List<ChannelAdmin>();
+        public ICollection<ChannelMember> Members { get; set; }= new List<ChannelMember>();
+        public IReadOnlyCollection<ChannelInvite> Invites { get; set; } = new List<ChannelInvite>();
+        public ICollection<ChannelAvatar>ChannelAvatars { get; set; }=new List<ChannelAvatar>();
         public Guid? LastMessageId { get; set; }
         public string? LastMessageText { get; set; }
         public Guid? LastUserSenderMessageId { get; set; }
@@ -63,7 +63,7 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
                 CanEdit = true,
                 CanPin = true
             };
-            channel._members.Add(member);
+            channel.Members.Add(member);
             channel._admins.Add(admin);
             return channel;
         }
@@ -106,7 +106,7 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
                 CanEdit = true,
                 CanPin = true
             };
-            channel._members.Add(member);
+            channel.Members.Add(member);
             channel._admins.Add(admin);
             return channel;
         }
@@ -138,22 +138,22 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
                       ?? throw new DomainException("دعوت معتبر نیست.");
             if (inv.IsExpired(Expiration)) throw new DomainException("دعوت منقضی شده.");
             if (!IsMember(userId))
-                _members.Add(ChannelMember.Join(Id, userId));
+                Members.Add(ChannelMember.Join(Id, userId));
             inv.MarkUsed(Expiration);
         }
-        public void Join(Guid userId, IDateTimeProvider clock)
+        public void Join(Guid userId)
         {
             if (!IsPublic) throw new DomainException("عضویت مستقیم فقط برای کانال عمومی.");
             if (!IsMember(userId))
-                _members.Add(ChannelMember.Join(Id, userId));
+                Members.Add(ChannelMember.Join(Id, userId));
         }
 
         public void Leave(Guid userId)
         {
-            var member = _members.SingleOrDefault(m => m.UserId == userId)
+            var member = Members.SingleOrDefault(m => m.UserId == userId)
                          ?? throw new DomainException("عضو نیستید.");
             if (IsOnlyAdmin(userId)) throw new DomainException("آخرین ادمین نمی‌تواند خارج شود.");
-            _members.Remove(member);
+            Members.Remove(member);
             var admin = _admins.SingleOrDefault(a => a.UserId == userId);
             if (admin != null) _admins.Remove(admin);
         }
@@ -198,7 +198,7 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
             if (!userName.All(c => char.IsLetterOrDigit(c) || c is '.' or '_' or '-'))
                 throw new DomainException("کاراکتر نامعتبر در نام کاربری.");
         }
-        private bool IsMember(Guid userId) => _members.Any(m => m.UserId == userId);
+        private bool IsMember(Guid userId) => Members.Any(m => m.UserId == userId);
         private bool IsOnlyAdmin(Guid userId) => _admins.Count == 1 && _admins[0].UserId == userId;
     }
 }

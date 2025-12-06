@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using HealthChecks.UI.Client;
 using Microsoft.Extensions.FileProviders;
 using CleanArchitecture.Application.Hubs;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +32,17 @@ builder.Services.AddSignalR(options =>
     options.ClientTimeoutInterval=TimeSpan.FromSeconds(120);
 });
 
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 1L * 1024 * 1024 * 1024; 
 
+});
+
+builder.WebHost.ConfigureKestrel(opt =>
+{
+
+    opt.Limits.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; 
+});
 
 builder.Services.RegisterApplicationServices()
                 .RegisterInfraStructureServices(builder.Configuration)
@@ -53,7 +65,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    //dbContext.Database.Migrate();
+    dbContext.Database.Migrate();
     await SeedDataExtensions.InitializeRoles(scope.ServiceProvider);
 }
 app.UseMiddleware<CustomExceptionHandlerMiddleware>();

@@ -20,7 +20,16 @@ namespace CleanArchitecture.Infrastructure.smsProvider
 
         public async Task SendVerificationCode(string phoneNumber, string code)
         {
-                 await smsIr.VerifySendAsync(phoneNumber, 100000, new VerifySendParameter[] { new("Code", code) });
+            try
+            {
+                await smsIr.VerifySendAsync(phoneNumber, 100000, new VerifySendParameter[] { new("Code", code) });
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+                
         }
     }
 }

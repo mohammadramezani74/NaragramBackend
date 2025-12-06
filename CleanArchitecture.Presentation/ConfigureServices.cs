@@ -87,11 +87,10 @@ namespace CleanArchitecture.Presentation
                         ValidateIssuer = true,
 
                     };
-                    
-#if DEBUG
+
                     o.Events = new JwtBearerEvents
                     {
-                        OnMessageReceived = (context) =>
+                        OnMessageReceived = context =>
                         {
                             if (context.Request.Path.StartsWithSegments("/hubs/naraHub"))
                             {
@@ -104,7 +103,6 @@ namespace CleanArchitecture.Presentation
                             return Task.CompletedTask;
                         }
                     };
-#endif
                 });
 
             return services;

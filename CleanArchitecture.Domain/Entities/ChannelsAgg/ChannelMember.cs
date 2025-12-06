@@ -10,16 +10,27 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
 {
     public class ChannelMember : BaseEntity
     {
-        public Guid ChannelId { get; internal set; }
-        public Channel Channel { get; internal set; }
+        public Guid ChannelId { get;  set; }
+        public Channel Channel { get;  set; }
 
-        public Guid UserId { get; internal set; }
-        public User User { get; internal set; }
-        public int UnreadCount { get; internal set; }
+        public Guid UserId { get;  set; }
+        public User User { get;  set; }
+        public int UnreadCount { get;  set; }
         public void IncreaseCount() => UnreadCount++;
         public void DecreaseCount() => UnreadCount--;
         public void EmptyCount() => UnreadCount = 0;
 
+        public static ChannelMember Build(Guid channelId,Guid UserId,Guid CreateBy)
+            => new ChannelMember
+            {
+                ChannelId = channelId,
+                UserId = UserId,
+                CreateDate = DateTime.Now,
+                Deleted = false,
+                Id=Guid.NewGuid(),
+                CreatedByUserId=CreateBy,
+                
+            };
         public static ChannelMember Join(Guid channelId, Guid userId)
         {
             return new ChannelMember

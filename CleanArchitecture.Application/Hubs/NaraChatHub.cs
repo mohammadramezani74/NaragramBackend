@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 
@@ -33,7 +34,7 @@ namespace CleanArchitecture.Application.Hubs
             {
                 var userId = userIdClaim.Value;
                 var channelIds = await _uow.Channels
-                 .Where(cu => cu.Members.Any(x => x.UserId ==Guid.Parse(userId)))
+                 .Where(cu => cu.Members.Any(x => x.UserId == Guid.Parse(userId)))
                  .Select(cu => cu.Id)
                  .ToListAsync();
 
@@ -46,36 +47,52 @@ namespace CleanArchitecture.Application.Hubs
 
 #else
             try
+    {
+        var httpContext = Context.GetHttpContext();
+        if (httpContext == null)
+        {
+            _loger.LogError("HttpContext is null in OnConnectedAsync (Release).");
+            return;
+        }
+
+        // 🚩 توکن از querystring دقیقا مثل چیزی که فرانت می‌فرسته
+        var rawToken = httpContext.Request.Query["access_token"].ToString();
+        _loger.LogWarning("token (query access_token) is {token}", rawToken);
+
+        if (string.IsNullOrWhiteSpace(rawToken))
+        {
+            _loger.LogError("access_token query is empty in Release.");
+            return;
+        }
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var jwtToken = tokenHandler.ReadJwtToken(rawToken);
+
+        var userId = jwtToken.Claims.First(x => x.Type == "sub").Value;
+        _loger.LogError("my user id is {userid}", userId);
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var guid = Guid.Parse(userId);
+
+            var channelIds = await _uow.Channels
+                .Where(cu => cu.Members.Any(x => x.UserId == guid))
+                .Select(cu => cu.Id)
+                .ToListAsync();
+
+            foreach (var channelId in channelIds)
             {
-
-
-                var token = Context.GetHttpContext().Request.Headers.FirstOrDefault(x =>
-      x.Key == "Authorization");
-                _loger.LogWarning($"token is {token.Value}");
-                var validtoken=token.Value.ToString().Replace("Bearer" ,"").Trim();
-                _loger.LogWarning($"validtoken is {validtoken}");
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var jwtToken = tokenHandler.ReadJwtToken(validtoken);
-              var userId=  jwtToken.Claims.Where(x => x.Type == "sub").First().Value;
-                if (userId != null) {
-                    var channelIds = await _uow.Channels
-                 .Where(cu => cu.Members.Any(x => x.UserId == Guid.Parse(userId)))
-                 .Select(cu => cu.Id)
-                 .ToListAsync();
-
-                    foreach (var channelId in channelIds)
-                    {
-                        await Groups.AddToGroupAsync(Context.ConnectionId, channelId.ToString());
-                    }
-                }
-                _loger.LogWarning($"UserId Id {userId}");
-                await SetUserOnline(new UserDto(Guid.Parse(userId),string.Empty));
-
+                await Groups.AddToGroupAsync(Context.ConnectionId, channelId.ToString());
             }
-            catch (Exception ex)
-            {
-                _loger.LogError($"Context.GetHttpContext() is not found");
-            }
+
+            _loger.LogWarning("UserId Id {userId}", userId);
+            await SetUserOnline(new UserDto(guid, string.Empty));
+        }
+    }
+    catch (Exception ex)
+    {
+        _loger.LogError(ex, "Error in OnConnectedAsync (Release).");
+    }
 #endif
 
         }
@@ -218,6 +235,16 @@ namespace CleanArchitecture.Application.Hubs
         public Task Ping()
         {
             return Task.CompletedTask;
+        }
+        public static IReadOnlyList<string> GetUserConnections(Guid userId)
+        {
+            if (_onlineUsers.TryGetValue(userId, out var user))
+            {
+            
+                return user.ConnectionIds.ToList();
+            }
+
+            return Array.Empty<string>();
         }
         public async Task GetMissedMessages(ChatMessageDto Lastmessage)
         {

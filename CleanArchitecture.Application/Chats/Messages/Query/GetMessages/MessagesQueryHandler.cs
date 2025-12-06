@@ -156,15 +156,6 @@ namespace CleanArchitecture.Application.Chats.Messages
             }
         }
 
-        private static ChatFilesDto? MapFile(Message x)
-        {
-            if (x.MessageType == MessageType.Text)
-                return null;
-            if(x.ChatFiles.Any())
-            return new ChatFilesDto { FileId=x.ChatFiles.First().Id,
-            FileName=x.ChatFiles.First().FileName,
-            FileSize= x.ChatFiles.First().FileSize.ToString()};
-            return null;
-        }
+
     }
 }

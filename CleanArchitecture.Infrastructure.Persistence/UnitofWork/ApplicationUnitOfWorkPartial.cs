@@ -24,5 +24,6 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<ChannelAdmin> ChannelAdmins => _context.Set<ChannelAdmin>();
         public DbSet<ChannelMessageSeen> ChannelMessageSeens => _context.Set<ChannelMessageSeen>();
         public DbSet<ChannelInvite> ChannelInvites => _context.Set<ChannelInvite>();
+        public DbSet<ChannelAvatar> ChannelAvatars => _context.Set<ChannelAvatar>();
     }
 }

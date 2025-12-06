@@ -25,10 +25,19 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.DeleteMessage
       await _uow.ChatFiles.Where(x=>x.MessageId==request.MessageId).ExecuteDeleteAsync(cancellationToken);
 
             }
+            var message = await _uow.Messages.AsNoTracking().Where(x => x.Id == request.MessageId).FirstOrDefaultAsync();
            await _uow.Messages.Where(x=>x.Id==request.MessageId).ExecuteDeleteAsync(cancellationToken);
-
-            await _hubContext.Clients.User(request.OtherUserId.ToString()).DeletedMessageReceived(request.MessageId);
             await _uow.SaveChangesAsync(cancellationToken);
+            if (message.ChannelId is null)
+            {
+                await _hubContext.Clients.User(request.OtherUserId.ToString()).DeletedMessageReceived(request.MessageId);
+            }
+            else
+            {
+                await _hubContext.Clients.Groups(message.ChannelId.ToString()).DeletedMessageReceived(request.MessageId);
+
+              
+            }
             return new OperationResult().succedded();
         }
     }

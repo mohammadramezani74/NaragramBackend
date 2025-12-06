@@ -33,6 +33,7 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<ChannelAdmin> ChannelAdmins { get; }
         public DbSet<ChannelMessageSeen> ChannelMessageSeens { get; }
         public DbSet<ChannelInvite> ChannelInvites  { get; }
+        public DbSet<ChannelAvatar> ChannelAvatars   { get; }
 
 }
 }

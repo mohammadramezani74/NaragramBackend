@@ -17,21 +17,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CleanArchitecture.Application.Abstraction;
 
 namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
 {
     internal sealed class SendChannelMessageCommandHandler(IApplicationUnitOfWork uow
         ,IApplicationUserManager usermanager,
-        IHubContext<NaraHub, IChatHubClient> hubContext) : ICommandHandler<SendChannelMessageCommand,Guid>
+        IHubContext<NaraHub, IChatHubClient> hubContext,
+        INotificationService notifService) : ICommandHandler<SendChannelMessageCommand,Guid>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _usermanager = usermanager;
+        private readonly INotificationService _notifService = notifService;
         private readonly IHubContext<NaraHub, IChatHubClient> _hubContext = hubContext;
 
         public async Task<OperationResult<Guid>> Handle(SendChannelMessageCommand request, CancellationToken cancellationToken)
         {
             var op = new OperationResult();
             var MyId = _usermanager.UserId!.Value;
+            var AllMembers=await _uow.ChannelMembers.Where(x=>x.ChannelId == request.ChannelId).ToListAsync();
+            foreach (var member in AllMembers)
+            {
+                member.IncreaseCount();
+            }
+    
             var Myuser = await _usermanager.GetUserBy(MyId);
             var channel = await _uow.Channels.Where(x => x.Id == request.ChannelId).FirstOrDefaultAsync(cancellationToken);
             var message = Message.AddForChannelMessage(request.Message, request.ChannelId, MyId,
@@ -43,6 +52,7 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
             channel.LastMessageId = message.Id;
             channel.LastUserSenderMessageId = MyId;
             channel.LastMessageSentAt = message.CreateDate;
+           
             _uow.Messages.Add(message);
             await _uow.SaveChangesAsync(cancellationToken);
             var messageDto = new ChatMessageDto
@@ -62,7 +72,7 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
                 {
                     foreach (var token in firebaseTokens)
                     {
-                      //  await _notifService.Send(token.Token, messageDto.Content, Myuser.FirsName + " " + Myuser.LastName);
+                       await _notifService.Send(token.Token, messageDto.Content, Myuser.FirsName + " " + Myuser.LastName);
                     }
                 }
             }
@@ -72,8 +82,15 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
 
             }
 
-            await _hubContext.Clients.Group(channel.Id.ToString()).IncreaseMessageCount(channel.Id);
-            await _hubContext.Clients.Group(channel.Id.ToString()).MessagedReceived(messageDto);
+            var excludedConnections = NaraHub.GetUserConnections(MyId);
+
+            await _hubContext.Clients
+                .GroupExcept(channel.Id.ToString(), excludedConnections)
+                .IncreaseMessageCount(channel.Id);
+
+            await _hubContext.Clients
+                .GroupExcept(channel.Id.ToString(), excludedConnections)
+                .MessagedReceived(messageDto);
             return message.Id;
         }
         private static string GetMessageFormat(MessageType messageType)
