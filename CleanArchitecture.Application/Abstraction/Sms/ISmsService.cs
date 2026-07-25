@@ -9,5 +9,6 @@ namespace CleanArchitecture.Application.Abstraction.Sms
     public interface ISmsService
     {
         Task SendVerificationCode(string phoneNumber, string code);
+        Task SendMessageToUser(string phoneNumber, string message);
     }
 }

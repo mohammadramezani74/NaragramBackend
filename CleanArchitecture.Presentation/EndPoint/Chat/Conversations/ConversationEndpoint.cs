@@ -34,13 +34,7 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.Conversations
                 }
                 return Results.Ok(result);
             });
-            app.MapPost("/CreateGroupConversation", async ([FromServices] ISender sender
-            , [FromBody] CreateGroupConversationCommand command) =>
-            {
-
-                var result = await sender.Send(command);
-                return Results.Ok(result);
-            });
+        
             app.MapPost("/PinConversation", async ([FromServices] ISender sender
      , [FromBody] PinConversationCommand command) =>
             {

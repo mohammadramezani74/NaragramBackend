@@ -3,6 +3,7 @@ using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
 using CleanArchitecture.Domain.Entities.Chat;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,22 +22,14 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreateGroupC
         {
             var AllExists = request.Others.All( u =>  _userManager.ExistUserBy(u));
             var me = await _userManager.GetUserBy(_userManager.UserId!.Value);
-            //if (request is null|
-            //  request!.Others.All(u => _userManager.ExistUserBy(u)))
-            //{
-            //    return new OperationResult().Failed("User Not Found");
-            //}
-            var group = Domain.Entities.Chat.Conversation.Create();
-            group.AddUser(me!);
-            foreach (var UserId in request.Others)
-            {
-                var user = await _userManager.GetUserBy(UserId);
-                group.AddUser(user!);
-            } 
+     
+            var others=await _uow.Users.Where(x=>request.Others.Contains(x.Id)).ToListAsync();
+            var group = Domain.Entities.Chat.Conversation.Create(me!, others,request.Title,request.Description,request.UserName);
+        
             _uow.Conversation.Add(group);
            
             await _uow.SaveChangesAsync();
-return new  OperationResult().succedded();
+            return new  OperationResult().succedded();
         }
     }
 }

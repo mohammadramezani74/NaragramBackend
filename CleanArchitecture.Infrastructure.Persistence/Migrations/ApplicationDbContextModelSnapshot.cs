@@ -515,6 +515,10 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1500)
+                        .HasColumnType("nvarchar(1500)");
+
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("bit");
 
@@ -550,6 +554,10 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("UserName")
+                        .HasMaxLength(140)
+                        .HasColumnType("nvarchar(140)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
@@ -557,6 +565,147 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.HasIndex("ModifiedById");
 
                     b.ToTable("Conversation");
+                });
+
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.ConversationAvatar", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Extension")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar");
+
+                    b.Property<byte[]>("FileData")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar");
+
+                    b.Property<decimal>("FileSize")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ModifiedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ModifiedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Thumbnail")
+                        .HasColumnType("varbinary(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ModifiedById");
+
+                    b.ToTable("ConversationAvatar", (string)null);
+                });
+
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.ConversationUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsMuted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ModifiedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnreadCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ModifiedById");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ConversationUser", (string)null);
                 });
 
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.Message", b =>
@@ -1387,103 +1536,67 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ModifiedById")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.OwnsMany("CleanArchitecture.Domain.Entities.Chat.ConversationUser", "Users", b1 =>
-                        {
-                            b1.Property<Guid>("Id")
-                                .ValueGeneratedOnAdd()
-                                .HasColumnType("uniqueidentifier");
+                    b.Navigation("CreatedByUser");
 
-                            b1.Property<Guid>("ConversationId")
-                                .HasColumnType("uniqueidentifier");
+                    b.Navigation("ModifiedBy");
+                });
 
-                            b1.Property<DateTime>("CreateDate")
-                                .HasColumnType("datetime2");
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.ConversationAvatar", b =>
+                {
+                    b.HasOne("CleanArchitecture.Domain.Entities.Chat.Conversation", "Conversation")
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                            b1.Property<string>("CreatedByBrowserName")
-                                .HasMaxLength(1000)
-                                .HasColumnType("nvarchar(1000)");
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                            b1.Property<string>("CreatedByIp")
-                                .HasMaxLength(255)
-                                .HasColumnType("nvarchar(255)");
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedById")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                            b1.Property<Guid?>("CreatedByUserId")
-                                .HasColumnType("uniqueidentifier");
+                    b.Navigation("Conversation");
 
-                            b1.Property<bool>("Deleted")
-                                .HasColumnType("bit");
+                    b.Navigation("CreatedByUser");
 
-                            b1.Property<bool>("IsBlocked")
-                                .HasColumnType("bit");
+                    b.Navigation("ModifiedBy");
+                });
 
-                            b1.Property<bool>("IsPinned")
-                                .HasColumnType("bit");
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.ConversationUser", b =>
+                {
+                    b.HasOne("CleanArchitecture.Domain.Entities.Chat.Conversation", "Conversation")
+                        .WithMany("Users")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                            b1.Property<string>("ModifiedByBrowserName")
-                                .HasMaxLength(1000)
-                                .HasColumnType("nvarchar(1000)");
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                            b1.Property<Guid?>("ModifiedById")
-                                .HasColumnType("uniqueidentifier");
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedById")
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                            b1.Property<string>("ModifiedByIp")
-                                .HasMaxLength(255)
-                                .HasColumnType("nvarchar(255)");
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                            b1.Property<DateTime?>("ModifiedDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<int>("UnreadCount")
-                                .HasColumnType("int");
-
-                            b1.Property<Guid>("UserId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("ConversationId");
-
-                            b1.HasIndex("CreatedByUserId");
-
-                            b1.HasIndex("ModifiedById");
-
-                            b1.HasIndex("UserId");
-
-                            b1.ToTable("ConversationUser");
-
-                            b1.WithOwner("Conversation")
-                                .HasForeignKey("ConversationId");
-
-                            b1.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "CreatedByUser")
-                                .WithMany()
-                                .HasForeignKey("CreatedByUserId")
-                                .OnDelete(DeleteBehavior.Restrict);
-
-                            b1.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "ModifiedBy")
-                                .WithMany()
-                                .HasForeignKey("ModifiedById")
-                                .OnDelete(DeleteBehavior.Restrict);
-
-                            b1.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "User")
-                                .WithMany()
-                                .HasForeignKey("UserId")
-                                .OnDelete(DeleteBehavior.Restrict)
-                                .IsRequired();
-
-                            b1.Navigation("Conversation");
-
-                            b1.Navigation("CreatedByUser");
-
-                            b1.Navigation("ModifiedBy");
-
-                            b1.Navigation("User");
-                        });
+                    b.Navigation("Conversation");
 
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("ModifiedBy");
 
-                    b.Navigation("Users");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.Message", b =>
@@ -1718,6 +1831,8 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.Conversation", b =>
                 {
                     b.Navigation("Messages");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.Message", b =>

@@ -21,6 +21,7 @@ using SixLabors.ImageSharp.Formats.Bmp;
 using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Enums;
 using CleanArchitecture.Application.Common.Utilities.ConstChat;
+using CleanArchitecture.Application.Chats.Messages;
 
 namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
 {
@@ -97,7 +98,8 @@ namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
                     FileId= file.Id,
                     FileName=file.FileName,
                     FileSize=file.FileSize.ToString()
-                }
+                },
+                ConversationType=ConversationTyped.Private
                 
             };
 

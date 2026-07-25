@@ -16,8 +16,10 @@ namespace CleanArchitecture.Application.Chats.Messages
         public string SenderName { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public DateTime SendAt { get; set; }
-        public int Type { get; set; } =0 ;
-        public bool IsMine  { get; set; }
+        public int Type { get; set; } = 0;
+        public bool IsMute { get; set; }
+        public bool IsMine { get; set; }
+        public bool IsAdmin { get; set; }
         public bool IsSeen { get; set; }
         public bool isEdited { get; set; }
         public Guid? ParentId { get; set; }
@@ -25,11 +27,19 @@ namespace CleanArchitecture.Application.Chats.Messages
         public string? Reaction { get; set; }
         public float? Latitude { get; set; }
         public float? Longitude { get; set; }
+        public ConversationTyped ConversationType { get; set; }
 
         public void Register(TypeAdapterConfig config)
         {
             config.NewConfig<Conversation, MessageResponse>();
-                
+
         }
+      
+    }
+    public enum ConversationTyped
+    {
+        Private = 1,
+        Channel = 2,
+        group = 3
     }
 }

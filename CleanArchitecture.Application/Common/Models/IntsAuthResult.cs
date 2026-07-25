@@ -22,7 +22,8 @@ namespace CleanArchitecture.Application.Common.Models
             public string firstName { get; set; }
             public string lastName { get; set; }
             public string city { get; set; }
-            public string chartPost { get; set; }
+        public string NationalCode { get; set; }
+        public string chartPost { get; set; }
         }
 
     

@@ -14,6 +14,7 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<TodoItem> TodoItem => _context.Set<TodoItem>();
         public DbSet<OutboxMessage> OutboxMessage => _context.Set<OutboxMessage>();
         public DbSet<Conversation> Conversation => _context.Set<Conversation>();
+        public DbSet<ConversationUser> ConversationUser => _context.Set<ConversationUser>();
         public DbSet<Message> Messages => _context.Set<Message>();
         public DbSet<ChatFiles> ChatFiles => _context.Set<ChatFiles>();
         public DbSet<UserAvatar> UserAvatars => _context.Set<UserAvatar>();
@@ -25,5 +26,6 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<ChannelMessageSeen> ChannelMessageSeens => _context.Set<ChannelMessageSeen>();
         public DbSet<ChannelInvite> ChannelInvites => _context.Set<ChannelInvite>();
         public DbSet<ChannelAvatar> ChannelAvatars => _context.Set<ChannelAvatar>();
+        public DbSet<ConversationAvatar> ConversationAvatar => _context.Set<ConversationAvatar>();
     }
 }

@@ -136,6 +136,7 @@ namespace CleanArchitecture.Application.Chats.Messages
                         Type = (int)x.MessageType,
                         Longitude = x.Longitude,
                         Latitude = x.Latitude,
+                        ConversationType = ConversationTyped.Private,
                         FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
                         {
                             FileId = cf.Id,

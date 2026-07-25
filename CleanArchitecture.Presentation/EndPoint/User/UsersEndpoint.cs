@@ -11,6 +11,7 @@ using CleanArchitecture.Application.Users.Queries.ExportUser;
 using CleanArchitecture.Application.Users.Queries.GetUser;
 using CleanArchitecture.Application.Users.Queries.GetUserAvatar;
 using CleanArchitecture.Application.Users.Queries.GetUserInfoQuery;
+using CleanArchitecture.Application.Users.Queries.UserList;
 using CleanArchitecture.Presentation.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Components;
@@ -30,6 +31,12 @@ public sealed class UsersEndpoint:IEndpoint
            [FromQuery] string? search, CancellationToken cancellationToken) =>
         {
             var result = await Mediatr.Send(new GetUserQuery(search), cancellationToken);
+            return Results.Ok(result);
+        });
+        app.MapGet("GetUsersForGroup", async ([FromServices] ISender Mediatr,
+        [FromQuery] string? search, CancellationToken cancellationToken) =>
+        {
+            var result = await Mediatr.Send(new GetUsersListQuery(search), cancellationToken);
             return Results.Ok(result);
         });
 

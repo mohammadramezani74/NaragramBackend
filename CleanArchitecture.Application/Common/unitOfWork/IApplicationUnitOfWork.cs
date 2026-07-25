@@ -34,6 +34,8 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<ChannelMessageSeen> ChannelMessageSeens { get; }
         public DbSet<ChannelInvite> ChannelInvites  { get; }
         public DbSet<ChannelAvatar> ChannelAvatars   { get; }
+        public DbSet<ConversationUser> ConversationUser { get; }
+        public DbSet<ConversationAvatar> ConversationAvatar { get; }
 
-}
+    }
 }

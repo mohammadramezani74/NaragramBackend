@@ -53,6 +53,7 @@ namespace CleanArchitecture.Application.Channels.Query
                         FileName = cf.FileName,
                         FileSize = cf.FileSize.ToString()
                     }).FirstOrDefault(),
+
                 }).ToListAsync(cancellationToken);
             return messages.OrderBy(x => x.SendAt).ToList();
 

@@ -1,5 +1,6 @@
 ﻿
 using CleanArchitecture.Application.Chats.FileMessages.Query;
+using CleanArchitecture.Application.Groups.Query.GetAvatar;
 using CleanArchitecture.Application.Users.Queries.GetAvatar;
 using CleanArchitecture.Domain.Enums;
 using MediatR;
@@ -33,6 +34,7 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
                 }
 
             });
+            //GroupAvatarQuery
 
             app.MapGet("/{fileid:guid:required}/{ischannel:bool}/getAvatar", async ([FromServices] ISender sender
      , [FromRoute] Guid fileid, [FromRoute] bool ischannel) =>
@@ -47,6 +49,22 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
                 {
                     return Results.File(result.result.Bytes, result.result.Name);
                     
+                }
+
+            }).AllowAnonymous();
+            app.MapGet("/{fileid:guid:required}/getgroupAvatar", async ([FromServices] ISender sender
+, [FromRoute] Guid fileid) =>
+            {
+
+                var result = await sender.Send(new GroupAvatarQuery(fileid));
+                if (!result.IsSucceded)
+                {
+                    return Results.NotFound();
+                }
+                else
+                {
+                    return Results.File(result.result.Bytes, result.result.Name);
+
                 }
 
             }).AllowAnonymous();

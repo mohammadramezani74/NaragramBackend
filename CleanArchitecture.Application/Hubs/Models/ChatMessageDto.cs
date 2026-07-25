@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CleanArchitecture.Application.Chats.Messages;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,6 +21,7 @@ namespace CleanArchitecture.Application.Hubs.Models
         public ChatFilesDto? FileContent { get; set; }
         public float? Latitude { get; set; }
         public float? Longitude { get; set; }
+        public ConversationTyped ConversationType { get; set; }
     }
     
 }

@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.VisualBasic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -27,6 +28,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace CleanArchitecture.Infrastructure.Authentication;
 
@@ -77,11 +79,11 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
     {
        var Savedcode= _cacheService.Get<int>(phoneNumber);
 
-        if (int.Parse(verifyCode) !=Savedcode)
-        {
-            return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("کد اعتبار سنجی معتبر نمیباشد"));
+        //if (int.Parse(verifyCode) !=Savedcode)
+        //{
+        //    return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("کد اعتبار سنجی معتبر نمیباشد"));
 
-        }
+        //}
         var existedUser = await _userManager.Users.Where(x => x.PhoneNumber == phoneNumber.Trim()).FirstOrDefaultAsync();
         if (existedUser == null)
         {
@@ -114,6 +116,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 }
                 else
                 {
+              
                     return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("کاربری با این شماره همراه یافت نشد لطفا با پشتیبانی تماس بگیرید"));
                 }
             }
@@ -127,8 +130,24 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         }
         else
         {
-         var generatedToken= await  _tokenProvider.Generate(existedUser);
-            return new TokenResponse(generatedToken.accessToken, generatedToken.refreshToken);
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.irannara.com/api/v1/Telegram/AuthForChat");
+            request.Headers.Add("accept", "*/*");
+            var content = new StringContent($"\"{phoneNumber}\"", null, "application/json-patch+json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            var target = JsonSerializer.Deserialize<IntsAuthResult>(await response.Content.ReadAsStringAsync(),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (target.result.NationalCode == verifyCode)
+            {
+                var generatedToken = await _tokenProvider.Generate(existedUser);
+                return new TokenResponse(generatedToken.accessToken, generatedToken.refreshToken);
+            }
+            else
+            {
+                return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("کاربری با این شماره همراه یافت نشد لطفا با پشتیبانی تماس بگیرید"));
+            }
+       
         }
         return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("عملیات با خطا مواجه شد"));
 
@@ -248,7 +267,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
 
             var response = new List<GetUserResponse>();
 
-            var conversationsOfUser = await _unitOfWork.Conversation.AsNoTracking()
+            var conversationsOfUser = await _unitOfWork.Conversation.Where(x=>x.IsPrivate).AsNoTracking()
                          .AsSplitQuery()
                 .Include(x => x.Users)
                 .ThenInclude(x => x.User)
@@ -323,6 +342,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             Id = x.Id,
             FirstName = x.Title,
             UserName = x.UserName,
+            Bio=x.Description,
             LastReceivedMessage = x.LastMessageText,
             LastReceivedMessageId = x.LastMessageId,
             IsLastReceivedMessageForMe = false,
@@ -342,10 +362,43 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
 
         })
         .ToList();
-         
+
+            var rawGroups = await _unitOfWork.Conversation.AsNoTracking()
+               .Include(x => x.CreatedByUser)
+               .Include(x => x.Users)
+                   .ThenInclude(x => x.User)
+               .Where(x => x.IsPrivate == false && x.Users.Any(u => u.UserId == userId))
+               .AsSplitQuery()
+               .ToListAsync();
+
+            var groups = rawGroups.Select(x => new GetUserResponse
+            {
+                Id = x.Id,
+                FirstName = x.Title,
+                UserName = x.UserName,
+                LastReceivedMessage = x.LastMessageText,
+                Bio = x.Description,
+                Age = x.Users.Count.ToString(),
+                LastReceivedMessageId = x.LastMessageId,
+                IsLastReceivedMessageForMe = false,
+                MessageUnreadedCount = CalculateGroupsCount(x.Users, userId),
+                LastReceivedMessageSendDate = CreateDateTime(x.LastMessageSentAt),
+                LastMessageDate = x.LastMessageSentAt,
+                IsGroup = true,
+                channel = new ChannelDto
+                {
+                    Creator = x.CreatedByUser.LastName + " " + x.CreatedByUser.FirsName,
+                    CreatorId = x.CreatedByUserId.Value,
+                    admins = GetGroupAdmins(x.Users, x.CreatedByUserId),
+                    CurrentUserAdmin = IsGroupUserAdmin(x, userId.Value)
+                },
+                Avatar = SetGoupAvatar(x)
+            }).ToList();
+
 
             return response.Concat(userswithoutConversation)
             .Concat(channels)
+            .Concat(groups)
              .OrderByDescending(x => x.IsPin)
             .ThenByDescending(x=>x.LastMessageDate)
             .ThenByDescending(x=>x.Avatar!=null)
@@ -360,6 +413,12 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
     }
 
     private static int CalculateCount(ICollection<ChannelMember> members, Guid? userId)
+    {
+        var member = members.Where(x => x.UserId == userId).FirstOrDefault();
+        if (member == null) return 0;
+        return member.UnreadCount;
+    }
+    private static int CalculateGroupsCount(ICollection<ConversationUser> members, Guid? userId)
     {
         var member = members.Where(x => x.UserId == userId).FirstOrDefault();
         if (member == null) return 0;
@@ -381,6 +440,32 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
     {
       var list= new List<UserChannelDto>();
         foreach (var admin in admins.Where(x=>x.UserId!=CreatorId).ToList())
+        {
+            list.Add(new UserChannelDto
+            {
+                Id = admin.UserId,
+                IsAdmin = true,
+                Name = admin.User.FirsName + " " + admin.User.LastName
+            });
+        }
+        return list;
+    }
+    private static bool IsGroupUserAdmin(Conversation x, Guid userId)
+    {
+        var isEsixt=x.Users.Any(x=>x.UserId == userId&& x. IsAdmin);
+        if (x.CreatedByUserId == userId)
+            return true;
+        else if (isEsixt)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private static List<UserChannelDto> GetGroupAdmins(ICollection<ConversationUser> admins, Guid? CreatorId)
+    {
+        var list = new List<UserChannelDto>();
+        foreach (var admin in admins.Where(x => x.UserId != CreatorId &&x.IsAdmin).ToList())
         {
             list.Add(new UserChannelDto
             {
@@ -415,24 +500,26 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         var op = new OperationResult();
         var number = Random.Shared.Next(10000, 99999);
        User? user= await _userManager.Users.Where(x => x.PhoneNumber.Equals(phoneNumber)).FirstOrDefaultAsync();
-        if(user is null)
+
+        var message = $"کاربر گرامی در تاریخ {DateTime.Now.ToFarsiFull()} به اکانت ناراگرام شما با آیپی {httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress.ToString()} لاگین شد.";
+        if (user is null)
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.irannara.com/api/v1/Telegram/AuthForChat");
             request.Headers.Add("accept", "*/*");
-            var content = new StringContent($"\"{09228242581}\"", null, "application/json-patch+json");
+            var content = new StringContent($"\"{phoneNumber}\"", null, "application/json-patch+json");
             request.Content = content;
             var response = await client.SendAsync(request);
             if (!response.IsSuccessStatusCode)
              return   op.Failed("کاربری با این شماره همراه یافت نشد");
             _cacheService.Set(phoneNumber, number, TimeSpan.FromMinutes(2));
-            await _smsService.SendVerificationCode(phoneNumber, number.ToString());
+          //  await _smsService.SendMessageToUser(phoneNumber, message);
             return op.succedded();
         }
         //user.updateNationalCode(number);
         //await _unitOfWork.SaveChangesAsync();
         _cacheService.Set(phoneNumber, number, TimeSpan.FromMinutes(2));
-        await _smsService.SendVerificationCode(phoneNumber, number.ToString());
+       await _smsService.SendMessageToUser(phoneNumber, message);
         return op.succedded();
 
     }
@@ -452,6 +539,17 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             return $"api/v1/chatfiles/{x.Id}/{true}/getAvatar";
         
     }
+ 
+    public static string? SetGoupAvatar(Conversation x)
+    {
+
+
+
+        return $"api/v1/chatfiles/{x.Id}/getgroupAvatar";
+
+    }
+
+
 
     public async Task<List<string>> GetUserClaims(Guid userId, CancellationToken cancellationToken = default)
     {

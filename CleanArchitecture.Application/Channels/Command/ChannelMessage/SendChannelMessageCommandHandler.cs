@@ -42,7 +42,7 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
             }
     
             var Myuser = await _usermanager.GetUserBy(MyId);
-            var channel = await _uow.Channels.Where(x => x.Id == request.ChannelId).FirstOrDefaultAsync(cancellationToken);
+            var channel = await _uow.Channels.Include(x=>x.Members).Where(x => x.Id == request.ChannelId).FirstOrDefaultAsync(cancellationToken);
             var message = Message.AddForChannelMessage(request.Message, request.ChannelId, MyId,
                 type: MessageType.Text);
             var lastmessage = message.Content;
@@ -55,6 +55,7 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
            
             _uow.Messages.Add(message);
             await _uow.SaveChangesAsync(cancellationToken);
+            var members= channel.Members.Select(x=>x.UserId).ToList();
             var messageDto = new ChatMessageDto
             {
                 Id = message.Id,
@@ -67,14 +68,15 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
             };
             try
             {
-                var firebaseTokens = await _uow.FireBaseTokens.AsNoTracking().ToListAsync();
+                if (members.Any()) {
+                var firebaseTokens = await _uow.FireBaseTokens.AsNoTracking().Where(x=> members.Contains(x.UserId)).ToListAsync();
                 if (firebaseTokens.Any())
                 {
                     foreach (var token in firebaseTokens)
                     {
-                       await _notifService.Send(token.Token, messageDto.Content, Myuser.FirsName + " " + Myuser.LastName);
+                       await _notifService.Send(token.Token, messageDto.Content, channel.Title);
                     }
-                }
+                } }
             }
             catch (Exception ex)
             {

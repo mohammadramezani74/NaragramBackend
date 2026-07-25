@@ -7,6 +7,6 @@ using System.Threading.Tasks;
 
 namespace CleanArchitecture.Application.Chats.Conversations.Command.CreateGroupConverSation
 {
-    public sealed record  CreateGroupConversationCommand(List<Guid> Others):ICommands;
+    public sealed record  CreateGroupConversationCommand(List<Guid> Others,string Title,string UserName,string? Description):ICommands;
    
 }

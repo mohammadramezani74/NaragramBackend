@@ -18,6 +18,7 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public string FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;
         public string Age { get; set; } = null!;
+        public string? Bio { get; set; }
         public string? Avatar { get; set; } 
         public Address Address { get; set; } = null!;
         public string?  LastReceivedMessage { get; set; }
@@ -28,6 +29,7 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public bool IsBlocked { get; set; }
         public bool OtherUserBlocked { get; set; }
         public bool IsChannel { get; set; }
+        public bool IsGroup { get; set; }
         public ChannelDto? channel { get; set; } = null;
         public DateTime? LastMessageDate { get; set; }
 

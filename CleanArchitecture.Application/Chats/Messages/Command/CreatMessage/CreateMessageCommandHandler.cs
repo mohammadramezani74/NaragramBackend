@@ -9,6 +9,7 @@ using CleanArchitecture.Application.Hubs.Models;
 using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Enums;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,8 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
                 ParentId=message.ParentMessageId,
                 Latitude = message.Latitude,
                 Longitude = message.Longitude,
+                ConversationType= ConversationTyped.Private
+                
             };
           
     
@@ -103,7 +106,14 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
 
               
             }
-           
+            var notification = new NotificationModelDto
+            (Myuser.LastName + " " + Myuser.FirsName,
+            SetAvatar(Myuser, hostName, scheme),
+      request.Message,
+      "https://naragram.irannara.com/chat"
+
+          );
+            await _hubContext.Clients.User(anotherUser.ToString()).ReceivedNotifications(notification);
             await _hubContext.Clients.User(anotherUser.ToString()).IncreaseMessageCount(MyId);
             await _hubContext.Clients.User(anotherUser.ToString()).MessagedReceived(messageDto);
             if (result.IsSuccess)

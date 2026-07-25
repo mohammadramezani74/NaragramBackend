@@ -37,7 +37,12 @@ namespace CleanArchitecture.Application.Hubs
                  .Where(cu => cu.Members.Any(x => x.UserId == Guid.Parse(userId)))
                  .Select(cu => cu.Id)
                  .ToListAsync();
-
+                var groups=await _uow.Conversation.Where(x=>x.IsPrivate==false &&
+                x.Users.Any(x=>x.UserId == Guid.Parse(userId))).ToListAsync();
+                foreach (var group in groups)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, group.Id.ToString());
+                }
                 foreach (var channelId in channelIds)
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, channelId.ToString());
@@ -80,6 +85,13 @@ namespace CleanArchitecture.Application.Hubs
                 .Select(cu => cu.Id)
                 .ToListAsync();
 
+                     var groups=await _uow.Conversation.Where(x=>x.IsPrivate==false &&
+                x.Users.Any(x=>x.UserId == Guid.Parse(userId))).ToListAsync();
+                foreach (var group in groups)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, group.Id.ToString());
+                }
+
             foreach (var channelId in channelIds)
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, channelId.ToString());
@@ -94,6 +106,7 @@ namespace CleanArchitecture.Application.Hubs
         _loger.LogError(ex, "Error in OnConnectedAsync (Release).");
     }
 #endif
+
 
         }
         public override async Task OnDisconnectedAsync(Exception? exception)

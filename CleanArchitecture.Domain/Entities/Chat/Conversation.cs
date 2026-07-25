@@ -9,6 +9,8 @@ namespace CleanArchitecture.Domain.Entities.Chat
     public sealed class Conversation:BaseEntity
     {
         public string Title { get; private set; } = string.Empty;
+        public string? UserName { get;private set; }
+        public string? Description { get;private set; }
         public bool IsPrivate { get; private set; }
 
         public ICollection<Message> Messages { get; private set; }
@@ -31,6 +33,8 @@ namespace CleanArchitecture.Domain.Entities.Chat
                 CreateDate=DateTime.Now,
             });
         }
+    
+
 
         /// <summary>
         /// public chat
@@ -40,7 +44,7 @@ namespace CleanArchitecture.Domain.Entities.Chat
             => new Conversation
             {
                 IsPrivate = false,
-                Title="Say Hello",
+                Title ="Say Hello",
                 CreateDate = DateTime.Now,
                 Deleted = false,
 
@@ -75,6 +79,48 @@ namespace CleanArchitecture.Domain.Entities.Chat
          }
 
      };
+        /// <summary>
+        /// ساخت گروه
+        /// </summary>
+        /// <param name="Creator"></param>
+        /// <param name="Others"></param>
+        /// <returns></returns>
+        public static Conversation Create(User Creator, List<User> Others,string title,
+            string?desc,string username)
+        {
+            var conversation = new Conversation
+            {
+                IsPrivate = false,
+                Title = title,
+                UserName = username,
+                Description = desc,
+                CreateDate = DateTime.Now,
+                Deleted = false,
+                CreatedByUserId = Creator.Id,
+                Users = new List<ConversationUser>
+         {
+             new ConversationUser
+             {
+                 User=Creator,
+                 CreateDate = DateTime.Now,
+                 Deleted=false,
+                 Role=ConversationRole.Owner
+             },
+
+         }
+            };
+            for (int i = 0; i < Others.Count; i++)
+            {
+                conversation.Users.Add(new ConversationUser
+                {
+                    User = Others[i],
+                    CreateDate = DateTime.Now,
+                    Deleted = false,
+                });
+            }
+            return conversation;
+     }
+
         public Message AddMessage(string message,User user,Guid? ParrentId=null,List<ChatFiles>? files=null,MessageType type=MessageType.Text
             ,float? latitude=null,float? Longitude = null)
         {
@@ -100,7 +146,11 @@ namespace CleanArchitecture.Domain.Entities.Chat
 
         }
    
+        public void ChangeGroupBio(string bio)
+        {
+            Description = bio;
 
+        }
 
    
    

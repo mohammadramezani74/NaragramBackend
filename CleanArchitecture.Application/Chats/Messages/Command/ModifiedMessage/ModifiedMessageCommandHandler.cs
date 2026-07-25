@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CleanArchitecture.Application.Hubs.Models;
+using CleanArchitecture.Domain.Entities.Chat;
 
 namespace CleanArchitecture.Application.Chats.Messages.Command.ModifiedMessage
 {
@@ -26,7 +27,7 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ModifiedMessage
         public async Task<OperationResult> Handle(ModifiedMessageCommand request, CancellationToken cancellationToken)
         {
             var myId= _userManager.UserId!.Value;
-            var message = await _uow.Messages.Where(x => x.Id == request.MessageId).FirstOrDefaultAsync(cancellationToken);
+            var message = await _uow.Messages.Include(c=>c.Conversation).Where(x => x.Id == request.MessageId).FirstOrDefaultAsync(cancellationToken);
     
             await _uow.Messages.Where(x=>x.Id==request.MessageId)
         .ExecuteUpdateAsync(p => p
@@ -38,6 +39,15 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ModifiedMessage
      
       
             await _uow.SaveChangesAsync();
+            var isGroups = message.Conversation != null ? !message.Conversation.IsPrivate : false;
+            if (isGroups)
+            {
+                var excludedConnections = NaraHub.GetUserConnections(myId);
+                var editedMessage = new EditedMessageDto(request.MessageId, request.Message, null);
+                await _hubContext.Clients.GroupExcept(message.ConversationId.ToString(), excludedConnections)
+.EditedMessageReceived(editedMessage);
+
+            }
             if (message?.ChannelId is null)
             {
                 var editedMessage = new EditedMessageDto(request.MessageId, request.Message, null);
