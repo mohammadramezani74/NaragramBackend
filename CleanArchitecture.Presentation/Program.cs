@@ -1,4 +1,4 @@
-using CleanArchitecture.Application;
+﻿using CleanArchitecture.Application;
 using CleanArchitecture.Infrastructure;
 using CleanArchitecture.Infrastructure.Persistence;
 using CleanArchitecture.Infrastructure.Persistence.Extensions;
@@ -32,16 +32,23 @@ builder.Services.AddSignalR(options =>
     options.ClientTimeoutInterval=TimeSpan.FromSeconds(120);
 });
 
+const long MaxUpload = 550L * 1024 * 1024;
+
 builder.Services.Configure<FormOptions>(o =>
 {
-    o.MultipartBodyLengthLimit = 1L * 1024 * 1024 * 1024; 
-
+    o.MultipartBodyLengthLimit = MaxUpload;
+    o.MemoryBufferThreshold = 64 * 1024;   // بالاتر از این، روی دیسک بافر شود
 });
 
-builder.WebHost.ConfigureKestrel(opt =>
+builder.Services.Configure<IISServerOptions>(o =>
 {
+    o.MaxRequestBodySize = MaxUpload;      // پیش‌فرضش ۳۰ مگ است
+});
 
-    opt.Limits.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; 
+builder.WebHost.ConfigureKestrel(o =>
+{
+    o.Limits.MaxRequestBodySize = MaxUpload;
+    o.Limits.MinRequestBodyDataRate = null; // اتصال کند وسط راه قطع نشود
 });
 
 builder.Services.RegisterApplicationServices()

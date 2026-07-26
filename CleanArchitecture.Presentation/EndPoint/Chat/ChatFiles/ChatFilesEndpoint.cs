@@ -5,6 +5,7 @@ using CleanArchitecture.Application.Users.Queries.GetAvatar;
 using CleanArchitecture.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 
 namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
 {
@@ -13,18 +14,17 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
             app.MapGet("/{fileid:guid:required}/files", async ([FromServices] ISender sender
-      , [FromRoute] Guid fileid) =>
+      , [FromRoute] Guid fileid, [FromQuery] bool raw = false) =>
             {
 
                 var result = await sender.Send(new GetTargetFileCommand(fileid));
-                if (result.Status is 400) {
-                return Results.BadRequest(result.Message);
-                }
-                if(result.result.Type is MessageType.Video )
+                if (result.Status is 400) return Results.BadRequest(result.Message);
+
+                if (raw || result.result.Type is MessageType.Video)   // ← raw اضافه شد
                 {
-                    var stream = new MemoryStream(result.result.FileData);
-                    stream.Position = 0;
-                    return Results.File(stream, "application/octet-stream", result.result.Name, enableRangeProcessing: true);
+                    var stream = new MemoryStream(result.result.FileData, writable: false);
+                    return Results.File(stream, "application/octet-stream",
+                                        result.result.Name, enableRangeProcessing: true);
                 }
                 else
                 {if(result.result.thumbnail!=null)

@@ -12,12 +12,13 @@ namespace CleanArchitecture.Application.Common.Utilities.ImageExtension
         {
             try
             {
-                if (file == null || file.Length == 0)
-                    return null;
+                if (file is null || file.Length == 0) return null;
 
-                using var memoryStream = new MemoryStream();
-                await file.CopyToAsync(memoryStream);
-                return memoryStream.ToArray();
+                // یک تخصیص، دقیقاً به اندازه‌ی فایل.
+                var buffer = new byte[file.Length];
+                await using var stream = file.OpenReadStream();
+                await stream.ReadExactlyAsync(buffer);
+                return buffer;
             }
             catch (Exception ex)
             {
