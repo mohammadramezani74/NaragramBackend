@@ -2,6 +2,7 @@
 using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Abstraction.Caching;
 using CleanArchitecture.Application.Abstraction.CsvFiles;
+using CleanArchitecture.Application.Abstraction.Purge;
 using CleanArchitecture.Application.Abstraction.Sms;
 using CleanArchitecture.Application.Abstraction.Storage;
 using CleanArchitecture.Application.Abstraction.Uploader;
@@ -12,6 +13,7 @@ using CleanArchitecture.Infrastructure.Files;
 using CleanArchitecture.Infrastructure.HealthChecks;
 using CleanArchitecture.Infrastructure.Notification;
 using CleanArchitecture.Infrastructure.Persistence;
+using CleanArchitecture.Infrastructure.Purge;
 using CleanArchitecture.Infrastructure.smsProvider;
 using CleanArchitecture.Infrastructure.Storage;
 using CleanArchitecture.Infrastructure.Time;
@@ -62,6 +64,7 @@ public static class ConfigureServices
 
         services.AddHealthChecks()
             .AddSqlServer(sqlConnectionString, name: "sqlserver");
+        services.AddScoped<IMessagePurger, MessagePurger>();
 
         return services;
     }

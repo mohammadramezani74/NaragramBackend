@@ -13,6 +13,8 @@ namespace CleanArchitecture.Application.Chats.Messages
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
+        public string? ParentContent { get; set; }
+        public string? ParentSenderName { get; set; }
         public string SenderName { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public DateTime SendAt { get; set; }
@@ -42,4 +44,5 @@ namespace CleanArchitecture.Application.Chats.Messages
         Channel = 2,
         group = 3
     }
+    public sealed record MessagesPage(MessageResponse[] Items, DateTime? NextCursor, bool HasMore);
 }

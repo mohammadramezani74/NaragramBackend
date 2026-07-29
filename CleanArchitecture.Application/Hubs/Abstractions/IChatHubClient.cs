@@ -29,5 +29,6 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
         Task GetMissedMessages(List<ChatMessageDto> messages);
         Task GetDeletedChannel(Guid channelId);
         Task ReceiveNewChannel(GetUserResponse user);
+        Task ChatHistoryCleared(Guid conversationOrChannelId);
     }
 }

@@ -4,159 +4,102 @@ using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
 using CleanArchitecture.Application.Hubs;
 using CleanArchitecture.Application.Hubs.Abstractions;
-using CleanArchitecture.Application.Hubs.Models;
 using CleanArchitecture.Domain.Entities.Chat;
-using CleanArchitecture.Domain.Enums;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.IO.MemoryMappedFiles;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CleanArchitecture.Application.Chats.Messages
 {
-    internal sealed class MessagesQueryHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager, IHubContext<NaraHub, IChatHubClient> hubContext) : IQueryHandler<MessagesQuery, MessageResponse[]>
+    internal sealed class MessagesQueryHandler(
+        IApplicationUnitOfWork uow,
+        IApplicationUserManager userManager,
+        IHubContext<NaraHub, IChatHubClient> hubContext)
+        : IQueryHandler<MessagesQuery, MessagesPage>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _userManager = userManager;
-        private readonly IHubContext<NaraHub,IChatHubClient> _hubContext = hubContext;
+        private readonly IHubContext<NaraHub, IChatHubClient> _hubContext = hubContext;
 
-    //    public async Task<OperationResult<MessageResponse[]>> Handle(MessagesQuery request, CancellationToken cancellationToken)
-    //    {
-    //        try
-    //        {
-               
-        
-    //        var ConverSationMessages = await _uow.Messages.AsNoTracking()
-    //              .Include(x => x.CreatedByUser)
-    //              .Include(x=>x.ChatFiles)
-    //              .Where(x => x.ConversationId == request.ConversationId)
-    //             .OrderByDescending(x => x.CreateDate) 
-    //.Take(request.count)
-    //.OrderBy(x => x.CreateDate)
-    //              .Select(x => new MessageResponse
-    //              {
-    //                  Id = x.Id,
-    //                  UserId = x.CreatedByUser!.Id,
-    //                  Content = x.Content,
-    //                  SendAt = x.CreateDate,
-    //                  SenderName = $"{x.CreatedByUser.FirsName} {x.CreatedByUser.LastName}",
-    //                  IsMine = _userManager.UserId!.Value == x.CreatedByUser.Id,
-    //                  IsSeen = x.Seen,
-    //                  isEdited = x.ModifiedDate != null ? true : false,
-    //                  ParentId=x.ParentMessageId,
-    //                  Type=(int)x.MessageType,
-    //                  FileContent= MapFile(x)
-                      
-                      
-    //              }).ToListAsync() ;
-    //            var otherOnreadMessages = ConverSationMessages.Where(x => x.IsMine == false
-    //            && x.IsSeen == false).ToList();
-    //            if(otherOnreadMessages.Count > 0) {
-    //                var messagesIds = otherOnreadMessages.Select(x => x.Id).ToList();
-    //                var otheruserId = otherOnreadMessages.First().UserId;
-    //                var unreadMessages=await _uow.Messages.Where(x=> messagesIds.Contains(x.Id)).ToListAsync(cancellationToken);
-    //            foreach (var message in unreadMessages)
-    //            {
-    //                message.MarkMessageAsSeen() ;
-    //            }
-    //                var messageSeendto = new MessageSeenDto(messagesIds, otheruserId);
-    //          await  _hubContext.Clients.User(otheruserId.ToString()).SendAsync("MessageSeen", messageSeendto);
-    //            await _uow.SaveChangesAsync();
-    //            }
-    //            return ConverSationMessages.ToArray();
-    //        }
-    //        catch (Exception ex)
-    //        {
-
-    //            throw;
-    //        }
-    //    }
-        public async Task<OperationResult<MessageResponse[]>> Handle(MessagesQuery request, CancellationToken cancellationToken)
+        public async Task<OperationResult<MessagesPage>> Handle(
+            MessagesQuery request, CancellationToken cancellationToken)
         {
-            try
-            {
+            var op = new OperationResult();
+            var myId = _userManager.UserId!.Value;
+            var take = Math.Clamp(request.Take, 10, 100);
 
+            var conversation = await _uow.Conversation
+                .Include(x => x.Users)
+                .FirstOrDefaultAsync(x => x.Id == request.ConversationId, cancellationToken);
 
-                var myId = _userManager.UserId!.Value;
-                var usersOfconversation = await _uow.Conversation
-              .Include(x => x.Users)
-              .Where(x => x.Id == request.ConversationId).FirstOrDefaultAsync();
-                var users= usersOfconversation?.Users ;
-                var otheruser = users.Where(x => x.UserId != myId).First();
-          var myUser= users.Where(x=>x.UserId==myId).First();
-                if (myUser.UnreadCount > 0)
-                {
-                    var otherOnreadMessages = _uow.Messages.Where(x => x.Seen == false && x.CreatedByUserId == otheruser.UserId && x.ConversationId == request.ConversationId).ToList();
-                    if (myId == otheruser.UserId) { otherOnreadMessages = new List<Message>(); }
-                    myUser.EmptyCount();
-                    if (otherOnreadMessages.Any() ) {
-                    var messagesIds = otherOnreadMessages.Select(x => x.Id).ToList();
-                    var otheruserId = otherOnreadMessages.First().CreatedByUserId;
-                    var messageSeendto = new MessageSeenDto(messagesIds, otheruserId.Value, usersOfconversation.Id,myId);
-                    try
-                    {
-                        await _hubContext.Clients.User(otheruserId.ToString()).MessagedSeenReceived(messagesIds);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error sending to hub: {ex.Message}");
-                    }
+            if (conversation is null)
+                return OperationResult.Failure<MessagesPage>(op.Failed("گفتگو یافت نشد."));
 
-      
+            var myUser = conversation.Users.FirstOrDefault(x => x.UserId == myId);
+            if (myUser is null)
+                return OperationResult.Failure<MessagesPage>(op.Failed("عضو این گفتگو نیستید."));
 
-           
-                    otherOnreadMessages.ForEach(x => x.MarkMessageAsSeen()); }
-                    await _uow.SaveChangesAsync();
-                }
+            // علامت‌گذاری «خوانده شد» فقط در بارگذاری اول انجام می‌شود،
+            // نه هر بار که کاربر به بالا اسکرول می‌کند.
+            if (request.Before is null && myUser.UnreadCount > 0)
+                await MarkAsSeenAsync(conversation, myId, cancellationToken);
 
-                var ConverSationMessages = await _uow.Messages.AsNoTracking()
-                    .Include(x=>x.ChatFiles)
-                    .Include(x=>x.Reactions)
-                    
-                    .Include(x => x.CreatedByUser)
-                    .Where(x => x.ConversationId == request.ConversationId)
-                  .OrderByDescending(x=>x.CreateDate)
-                    .Take(request.count)
-                    .Select(x => new MessageResponse
-                    {
-                        Id = x.Id,
-                        UserId = x.CreatedByUser!.Id,
-                        Content = x.Content,
-                        SendAt = x.CreateDate,
-                        SenderName = x.CreatedByUser.FirsName + " " + x.CreatedByUser.LastName,
-                        IsMine = _userManager.UserId!.Value == x.CreatedByUser.Id,
-                        IsSeen = x.Seen,
-                        isEdited = x.ModifiedDate.HasValue,
-                        ParentId = x.ParentMessageId,
-                        Type = (int)x.MessageType,
-                        Longitude = x.Longitude,
-                        Latitude = x.Latitude,
-                        ConversationType = ConversationTyped.Private,
-                        FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
-                        {
-                            FileId = cf.Id,
-                            FileName = cf.FileName,
-                            FileSize = cf.FileSize.ToString()
-                        }).FirstOrDefault(),
-                        Reaction=x.Reactions.Select(x=>x.Reaction).FirstOrDefault(),
-                        
-                    }).ToListAsync(cancellationToken);
-          
+            var query = _uow.Messages.AsNoTracking()
+                .Where(m => m.ConversationId == request.ConversationId && !m.Deleted);
 
+            if (request.Before.HasValue)
+                query = query.Where(m => m.CreateDate < request.Before.Value);
 
-                return ConverSationMessages.OrderBy(x=>x.SendAt).ToArray();
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
+            var rows = await query
+                .OrderByDescending(m => m.CreateDate)
+                .Take(take + 1)
+                .Select(MessageProjection.ToResponse(myId))
+                .ToListAsync(cancellationToken);
+
+            var hasMore = rows.Count > take;
+            if (hasMore) rows.RemoveAt(rows.Count - 1);
+
+            // قدیمی‌ترین پیام این صفحه، cursor صفحه‌ی بعد است
+            var nextCursor = rows.Count > 0 ? rows[^1].SendAt : (DateTime?)null;
+
+            return new MessagesPage(
+                [.. rows.OrderBy(m => m.SendAt)],
+                nextCursor,
+                hasMore);
         }
 
+        private async Task MarkAsSeenAsync(
+            Conversation conversation, Guid myId, CancellationToken ct)
+        {
+            var otherUser = conversation.Users.FirstOrDefault(x => x.UserId != myId);
+            if (otherUser is null || otherUser.UserId == myId) return;
 
+            var unread = await _uow.Messages
+                .Where(m => m.ConversationId == conversation.Id
+                         && !m.Seen
+                         && m.CreatedByUserId == otherUser.UserId)
+                .ToListAsync(ct);
+
+            conversation.Users.First(x => x.UserId == myId).EmptyCount();
+
+            if (unread.Count > 0)
+            {
+                var ids = unread.Select(m => m.Id).ToList();
+                unread.ForEach(m => m.MarkMessageAsSeen());
+
+                try
+                {
+                    await _hubContext.Clients
+                        .User(otherUser.UserId.ToString())
+                        .MessagedSeenReceived(ids);
+                }
+                catch (Exception ex)
+                {
+                  
+                    Console.WriteLine($"Error sending to hub: {ex.Message}");
+                }
+            }
+
+            await _uow.SaveChangesAsync(ct);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using CleanArchitecture.Application.Channels.Command.ChannelMessage;
 using CleanArchitecture.Application.Channels.Command.CreateChannel;
+using CleanArchitecture.Application.Channels.Command.DeleteChannel;
 using CleanArchitecture.Application.Channels.Command.DeleteChannelMember;
 using CleanArchitecture.Application.Channels.Command.JoinPublicChannel;
 using CleanArchitecture.Application.Channels.Command.Members.AddMember;
@@ -15,6 +16,7 @@ using CleanArchitecture.Application.Channels.Query.DownLoadFile;
 using CleanArchitecture.Application.Channels.Query.FilesList;
 using CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage;
 using CleanArchitecture.Application.Chats.Messages;
+using CleanArchitecture.Application.Chats.Messages.Command.ClearHistory;
 using CleanArchitecture.Application.Chats.Messages.Command.CreatMessage;
 using CleanArchitecture.Application.Users.Commands.UploadAvatar;
 using CleanArchitecture.Application.Users.Queries.GetUserAvatar;
@@ -145,7 +147,29 @@ CancellationToken cancellationToken) =>
                 return Results.Ok(result);
             }).RequireAuthorization();
 
+            app.MapDelete("/{channelId:guid:required}/history", async (
+              [FromServices] ISender sender,
+              [FromRoute] Guid channelId,
+              CancellationToken ct) =>
+            {
+                var result = await sender.Send(new ClearChannelHistoryCommand(channelId), ct);
 
+                return result.IsSucceded
+                    ? Results.Ok(result)
+                    : Results.BadRequest(result.Message);
+            });
+
+            app.MapDelete("/{channelId:guid:required}", async (
+                [FromServices] ISender sender,
+                [FromRoute] Guid channelId,
+                CancellationToken ct) =>
+            {
+                var result = await sender.Send(new DeleteChannelCommand(channelId), ct);
+
+                return result.IsSucceded
+                    ? Results.Ok(result)
+                    : Results.BadRequest(result.Message);
+            });
 
 
 

@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace CleanArchitecture.Application.Chats.Messages
 {
-    public sealed record MessagesQuery(Guid ConversationId,int count=50) : IQuery<MessageResponse[]>;
+    public sealed record MessagesQuery(
+        Guid ConversationId,
+        DateTime? Before = null,
+        int Take = 30) : IQuery<MessagesPage>;
 
 }

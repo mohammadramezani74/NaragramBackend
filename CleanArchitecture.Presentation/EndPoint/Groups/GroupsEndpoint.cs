@@ -1,4 +1,5 @@
 ﻿
+using CleanArchitecture.Application.Channels.Command.DeleteChannel;
 using CleanArchitecture.Application.Channels.Command.DeleteChannelMember;
 using CleanArchitecture.Application.Channels.Command.Members.AddMember;
 using CleanArchitecture.Application.Channels.Command.PromoteOrDemotToAdmin;
@@ -9,6 +10,7 @@ using CleanArchitecture.Application.Channels.Query.FilesList;
 using CleanArchitecture.Application.Chats.Conversations.Command.CreateGroupConverSation;
 using CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage;
 using CleanArchitecture.Application.Chats.Messages;
+using CleanArchitecture.Application.Chats.Messages.Command.ClearHistory;
 using CleanArchitecture.Application.Groups.Command.AddNewMemberToGroup;
 using CleanArchitecture.Application.Groups.Command.ChangeGroupBio;
 using CleanArchitecture.Application.Groups.Command.MuteUser;
@@ -140,6 +142,30 @@ namespace CleanArchitecture.Presentation.EndPoint.Groups
 
                 var result = await sender.Send(command);
                 return Results.Ok(result);
+            });
+            app.MapDelete("/{groupId:guid:required}/history", async (
+    [FromServices] ISender sender,
+    [FromRoute] Guid groupId,
+    CancellationToken ct) =>
+            {
+                var result = await sender.Send(
+                    new ClearConversationHistoryCommand(groupId), ct);
+
+                return result.IsSucceded
+                    ? Results.Ok(result)
+                    : Results.BadRequest(result.Message);
+            });
+
+            app.MapDelete("/{groupId:guid:required}", async (
+                [FromServices] ISender sender,
+                [FromRoute] Guid groupId,
+                CancellationToken ct) =>
+            {
+                var result = await sender.Send(new DeleteChannelCommand(groupId), ct);
+
+                return result.IsSucceded
+                    ? Results.Ok(result)
+                    : Results.BadRequest(result.Message);
             });
 
         }
