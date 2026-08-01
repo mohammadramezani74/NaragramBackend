@@ -46,11 +46,15 @@ namespace CleanArchitecture.Application.Groups.Query.GetMessages
                     x => x.Id == request.ConversationId,
                     cancellationToken);
 
-
+            if (conversation is null)
+                return OperationResult.Failure<MessageResponse[]>(
+                    new OperationResult().NotFound("گروه یافت نشد یا حذف شده است."));
             var myMembership = conversation.Users
                 .FirstOrDefault(x => x.UserId == myId);
 
- 
+            if (myMembership is null)
+                return OperationResult.Failure<MessageResponse[]>(
+                    new OperationResult().Forbiden("شما عضو این گروه نیستید."));
 
             if (myMembership.UnreadCount > 0)
             {
