@@ -7,15 +7,16 @@ using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using CleanArchitecture.Domain.Enums;
 
 namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
 {
     internal sealed class ClearConversationHistoryCommandHandler(
-       IApplicationUnitOfWork uow,
-       IApplicationUserManager userManager,
-       IMessagePurger purger,
-       IHubContext<NaraHub, IChatHubClient> hubContext)
-       : ICommandHandler<ClearConversationHistoryCommand>
+          IApplicationUnitOfWork uow,
+          IApplicationUserManager userManager,
+          IMessagePurger purger,
+          IHubContext<NaraHub, IChatHubClient> hubContext)
+          : ICommandHandler<ClearConversationHistoryCommand>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _userManager = userManager;
@@ -35,20 +36,19 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
             if (conversation is null)
                 return op.NotFound("گفتگو یافت نشد.");
 
-            if (!conversation.Users.Any(u => u.UserId == myId))
+            var me = conversation.Users.FirstOrDefault(u => u.UserId == myId);
+            if (me is null)
                 return op.Forbiden("شما عضو این گفتگو نیستید.");
 
             // --- بررسی مجوز ---
-            // گفتگوی خصوصی: هر دو طرف مالک برابرند، هر کدام می‌تواند پاک کند.
-            // گروه: فقط سازنده. گروه‌ها یک Channel متناظر دارند که مالکیت
-            // و ادمین‌ها آنجا نگهداری می‌شود.
+            // خصوصی: هر دو طرف مالک برابرند.
+            // گروه: سازنده، یا کسی که نقش Owner دارد.
             if (!conversation.IsPrivate)
             {
-                var isCreator = await _uow.Channels
-                    .AnyAsync(c => c.Id == request.ConversationId
-                                && c.CreatedByUserId == myId, cancellationToken);
+                var isOwner = conversation.CreatedByUserId == myId
+                              || me.Role == ConversationRole.Owner;
 
-                if (!isCreator)
+                if (!isOwner)
                     return op.Forbiden("فقط سازنده‌ی گروه می‌تواند تاریخچه را پاک کند.");
             }
 
@@ -67,7 +67,6 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            // اطلاع به سایر اعضا تا صفحه‌شان خالی شود
             var others = conversation.Users
                 .Where(u => u.UserId != myId)
                 .Select(u => u.UserId.ToString())
@@ -83,7 +82,7 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
                 }
                 catch (Exception)
                 {
-                    // قطع بودن هاب نباید عملیات را ناموفق نشان دهد؛ داده پاک شده است
+                    // داده پاک شده؛ قطع بودن هاب نباید عملیات را ناموفق نشان دهد
                 }
             }
 
