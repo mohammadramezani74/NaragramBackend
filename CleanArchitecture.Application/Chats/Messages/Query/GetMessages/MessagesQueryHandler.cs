@@ -40,7 +40,7 @@ namespace CleanArchitecture.Application.Chats.Messages
 
             // علامت‌گذاری «خوانده شد» فقط در بارگذاری اول انجام می‌شود،
             // نه هر بار که کاربر به بالا اسکرول می‌کند.
-            if (request.Before is null && myUser.UnreadCount > 0)
+            if (request.Before is null)
                 await MarkAsSeenAsync(conversation, myId, cancellationToken);
 
             var query = _uow.Messages.AsNoTracking()
@@ -98,7 +98,10 @@ namespace CleanArchitecture.Application.Chats.Messages
                     Console.WriteLine($"Error sending to hub: {ex.Message}");
                 }
             }
+            var meMember = conversation.Users.First(x => x.UserId == myId);
+            if (meMember.UnreadCount > 0) meMember.EmptyCount();
 
+            if (unread.Count == 0 && meMember.UnreadCount == 0) return;   //
             await _uow.SaveChangesAsync(ct);
         }
     }

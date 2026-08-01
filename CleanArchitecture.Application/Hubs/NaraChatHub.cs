@@ -201,24 +201,33 @@ namespace CleanArchitecture.Application.Hubs
         }
         public async Task MessageSeen(MessageSeenDto messagesForSeen)
         {
-            if (_onlineUsers.ContainsKey(messagesForSeen.UserId))
+            var conversation = await _uow.Conversation
+                .Include(x => x.Users)
+                .FirstOrDefaultAsync(x => x.Id == messagesForSeen.ConversationId);
+
+            if (conversation is null) return;
+
+            // ۱ — شمارنده‌ی خودم را صفر کن. بی‌قید و شرط.
+            var me = conversation.Users.FirstOrDefault(x => x.UserId == messagesForSeen.MyId);
+            if (me is not null && me.UnreadCount > 0)
             {
-                var exists = await _uow.Messages
-                    .AnyAsync(x => messagesForSeen.messageId.Contains(x.Id));
-                if (exists)
-                {
-                await Clients.User(messagesForSeen.UserId.ToString()).MessagedSeenReceived(messagesForSeen.messageId);
-                var conversation=await _uow.Conversation.Include(x=>x.Users.Where(x=>x.ConversationId==messagesForSeen.ConversationId))
-                        .FirstOrDefaultAsync(x=>x.Id==messagesForSeen.ConversationId);
-                    if(conversation != null)
-                    {
-                        var user= conversation.Users.Where(x=>x.UserId==messagesForSeen.MyId).FirstOrDefault();
-                        user.EmptyCount();
-                        await _uow.SaveChangesAsync();
-                    }
-                }
+                me.EmptyCount();
+                await _uow.SaveChangesAsync();
+            }
+
+            // ۲ — تیک آبی فقط اگر طرف مقابل آنلاین باشد
+            if (!_onlineUsers.ContainsKey(messagesForSeen.UserId)) return;
+
+            var exists = await _uow.Messages
+                .AnyAsync(x => messagesForSeen.messageId.Contains(x.Id));
+
+            if (exists)
+            {
+                await Clients.User(messagesForSeen.UserId.ToString())
+                    .MessagedSeenReceived(messagesForSeen.messageId);
             }
         }
+
         public async Task SetUserOffline(UserDto user)
         {
 

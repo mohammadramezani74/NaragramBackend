@@ -78,6 +78,15 @@ namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
 
 
             var message = conversation.AddMessage(request.caption??string.Empty, Myuser!, null, [file], type);
+            var otherUser = conversation.Users.FirstOrDefault(x => x.UserId != MyId);
+            if (otherUser is not null)
+                otherUser.IncreaseCount();
+
+            conversation.LastMessageText = GetMessageFormat(type);
+            conversation.LastMessageId = message.Id;
+            conversation.LastUserSenderMessageId = MyId;
+            conversation.LastMessageSentAt = message.CreateDate;
+
             var result = await _uow.SaveChangesAsync(cancellationToken);
             var hostName = _httpContext.HttpContext.Request.Host.Value;
             var scheme = _httpContext.HttpContext.Request.Scheme;
@@ -175,7 +184,14 @@ namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
 
             );
         }
-
+        private static string GetMessageFormat(MessageType type) => type switch
+        {
+            MessageType.Image => "🖼 تصویر",
+            MessageType.Video => "🎬 ویدیو",
+            MessageType.Audio => "🎵 صوت",
+            MessageType.Document => "📎 فایل",
+            _ => "پیوست"
+        };
         public static string SetAvatar(User x, string hostName, string scheme)
         {
             string RootAddress = $"{scheme}://{hostName}";
