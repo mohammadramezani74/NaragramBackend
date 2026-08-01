@@ -28,6 +28,9 @@ namespace CleanArchitecture.Domain.Entities.Chat
         public ICollection<ChatFiles> ChatFiles { get; internal set; } = new List<ChatFiles>();
         public ICollection<Message> Replies { get; internal set; } = new List<Message>();
         public ICollection<MessageReaction> Reactions { get; private set; } = new List<MessageReaction>();
+        public bool IsPinned { get; private set; }
+        public DateTime? PinnedAt { get; private set; }
+        public Guid? PinnedByUserId { get; private set; }
         public void MarkMessageAsSeen()
         {
       
@@ -66,6 +69,19 @@ namespace CleanArchitecture.Domain.Entities.Chat
 
 
 
+        }
+        public void Pin(Guid byUserId)
+        {
+            IsPinned = true;
+            PinnedAt = DateTime.Now;
+            PinnedByUserId = byUserId;
+        }
+
+        public void Unpin()
+        {
+            IsPinned = false;
+            PinnedAt = null;
+            PinnedByUserId = null;
         }
     }
 }

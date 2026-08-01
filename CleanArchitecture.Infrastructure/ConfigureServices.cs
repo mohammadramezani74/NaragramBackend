@@ -2,6 +2,7 @@
 using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Abstraction.Caching;
 using CleanArchitecture.Application.Abstraction.CsvFiles;
+using CleanArchitecture.Application.Abstraction.Files;
 using CleanArchitecture.Application.Abstraction.Purge;
 using CleanArchitecture.Application.Abstraction.Sms;
 using CleanArchitecture.Application.Abstraction.Storage;
@@ -65,7 +66,7 @@ public static class ConfigureServices
         services.AddHealthChecks()
             .AddSqlServer(sqlConnectionString, name: "sqlserver");
         services.AddScoped<IMessagePurger, MessagePurger>();
-
+        services.AddScoped<IChatFileStreamer, ChatFileStreamer>();
         return services;
     }
 

@@ -17,7 +17,11 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
             builder.ToTable("Messages"); 
 
             builder.Property(m => m.Id).ValueGeneratedNever();
+            builder.HasIndex(m => new { m.ConversationId, m.IsPinned })
+       .HasFilter("[IsPinned] = 1");
 
+            builder.HasIndex(m => new { m.ChannelId, m.IsPinned })
+                   .HasFilter("[IsPinned] = 1");
             builder.Property(m => m.Content)
                 .IsRequired()
                 .HasMaxLength(4096);

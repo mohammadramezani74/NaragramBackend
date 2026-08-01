@@ -8,7 +8,9 @@ using CleanArchitecture.Application.Chats.Messages.Command.CreatMessage;
 using CleanArchitecture.Application.Chats.Messages.Command.DeleteMessage;
 using CleanArchitecture.Application.Chats.Messages.Command.ModifiedMessage;
 using CleanArchitecture.Application.Chats.Messages.Command.NewReaction;
+using CleanArchitecture.Application.Chats.Messages.Command.PinMessage;
 using CleanArchitecture.Application.Chats.Messages.Query.MessagesAround;
+using CleanArchitecture.Application.Chats.Messages.Query.PinnedMessages;
 using CleanArchitecture.Application.Chats.Messages.Query.SearchMessages;
 using CleanArchitecture.Application.Users.Commands.UploadAvatar;
 using MediatR;
@@ -125,9 +127,26 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.Messages
             });
 
 
+            app.MapPost("/{messageId:guid:required}/pin", async (
+    [FromServices] ISender sender,
+    [FromRoute] Guid messageId,
+    [FromQuery] bool pin = true,
+    CancellationToken ct = default) =>
+            {
+                var result = await sender.Send(new TogglePinMessageCommand(messageId, pin), ct);
+                return result.IsSucceded ? Results.Ok(result) : Results.BadRequest(result.Message);
+            });
+
+            app.MapGet("/{scopeId:guid:required}/pinned", async (
+                [FromServices] ISender sender,
+                [FromRoute] Guid scopeId,
+                CancellationToken ct) =>
+            {
+                var result = await sender.Send(new PinnedMessagesQuery(scopeId), ct);
+                return result.IsSucceded ? Results.Ok(result) : Results.BadRequest(result.Message);
+            });
 
 
-          
         }
     }
 }

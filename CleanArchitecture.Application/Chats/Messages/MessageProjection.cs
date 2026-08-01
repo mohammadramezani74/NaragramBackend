@@ -26,6 +26,7 @@ namespace CleanArchitecture.Application.Chats.Messages
                 Type = (int)m.MessageType,
                 Longitude = m.Longitude,
                 Latitude = m.Latitude,
+                IsPinned = m.IsPinned,
                 ParentContent = m.ParentMessage != null ? m.ParentMessage.Content : null,
 
                 ParentSenderName = m.ParentMessage != null && m.ParentMessage.CreatedByUser != null

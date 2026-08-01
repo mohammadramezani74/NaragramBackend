@@ -1,4 +1,6 @@
 ﻿
+using CleanArchitecture.Application.Abstraction.Authentication;
+using CleanArchitecture.Application.Abstraction.Files;
 using CleanArchitecture.Application.Chats.FileMessages.Query;
 using CleanArchitecture.Application.Groups.Query.GetAvatar;
 using CleanArchitecture.Application.Users.Queries.GetAvatar;
@@ -13,26 +15,29 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            app.MapGet("/{fileid:guid:required}/files", async ([FromServices] ISender sender
-      , [FromRoute] Guid fileid, [FromQuery] bool raw = false) =>
+            app.MapGet("/{fileid:guid:required}/files", async (
+     [FromServices] IChatFileStreamer streamer,
+     [FromServices] IApplicationUserManager userManager,
+     [FromRoute] Guid fileid,
+     HttpContext http,
+     CancellationToken ct) =>
             {
+                var myId = userManager.UserId;
+                if (myId is null) return Results.Unauthorized();
 
-                var result = await sender.Send(new GetTargetFileCommand(fileid));
-                if (result.Status is 400) return Results.BadRequest(result.Message);
+                var meta = await streamer.GetMetaAsync(fileid, myId.Value, ct);
+                if (meta is null) return Results.NotFound();
 
-                if (raw || result.result.Type is MessageType.Video)   // ← raw اضافه شد
-                {
-                    var stream = new MemoryStream(result.result.FileData, writable: false);
-                    return Results.File(stream, "application/octet-stream",
-                                        result.result.Name, enableRangeProcessing: true);
-                }
-                else
-                {if(result.result.thumbnail!=null)
-                      return Results.Ok(new { data = Convert.ToBase64String(result.result.FileData),thumbnail= Convert.ToBase64String(result.result.thumbnail), contentType = "application/octet-stream", fileDownloadName = result.result.Name });
-                      return Results.Ok(new { data = Convert.ToBase64String(result.result.FileData), contentType = "application/octet-stream", fileDownloadName = result.result.Name });
+                // هدرها را قبل از شروع نوشتن ست کن. Content-Length همان چیزی است که
+                // نوار پیشرفت سمت مرورگر به آن نیاز دارد.
+                http.Response.ContentType = meta.ContentType;
+                http.Response.ContentLength = meta.Length;
+                http.Response.Headers.ContentDisposition =
+                    $"attachment; filename*=UTF-8''{Uri.EscapeDataString(meta.DownloadName)}";
 
-                }
+                await streamer.StreamToAsync(fileid, http.Response.Body, ct);
 
+                return Results.Empty;
             });
             //GroupAvatarQuery
 

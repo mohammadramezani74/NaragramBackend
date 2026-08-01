@@ -13,6 +13,7 @@ namespace CleanArchitecture.Application.Chats.Messages
     {
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
+        public bool IsPinned { get; set; }
         public string? ParentContent { get; set; }
         public string? ParentSenderName { get; set; }
         public string SenderName { get; set; } = string.Empty;

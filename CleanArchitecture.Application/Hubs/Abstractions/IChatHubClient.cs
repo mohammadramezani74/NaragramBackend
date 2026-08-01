@@ -30,5 +30,6 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
         Task GetDeletedChannel(Guid channelId);
         Task ReceiveNewChannel(GetUserResponse user);
         Task ChatHistoryCleared(Guid conversationOrChannelId);
+        Task MessagePinChanged(Guid scopeId, Guid messageId, bool pinned);
     }
 }
