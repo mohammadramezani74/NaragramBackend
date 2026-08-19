@@ -35,6 +35,7 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivat
             .Include(x => x.Users)
             .ThenInclude(x => x.User.UserAvatars)
             .Where(x =>
+             x.IsPrivate &&
                 x.Users.Count == 2 && 
                 x.Users.All(u => OurChatIds.Contains(u.UserId))
             )

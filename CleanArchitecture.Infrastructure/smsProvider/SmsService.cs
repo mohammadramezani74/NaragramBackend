@@ -19,7 +19,7 @@ namespace CleanArchitecture.Infrastructure.smsProvider
         public SmsService()
         {
             smsIr = new SmsIr("0bCU8RLSS1XK7u1endCgi88C5MYojVlw5wpXon9WQEqnFrBMQrS7pdexhVjgbBeD");
-            lineNumber = 300089930147;
+            lineNumber = 2141387;
         }
 
         public async Task SendMessageToUser(string phoneNumber, string message)
