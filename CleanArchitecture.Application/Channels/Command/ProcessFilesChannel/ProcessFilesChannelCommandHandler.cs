@@ -75,6 +75,9 @@ namespace CleanArchitecture.Application.Channels.Command.ProcessFilesChannel
             var messageDto = new ChatMessageDto
             {
                 Id = message.Id,
+                ScopeId = channel.Id,
+                // مثل مسیر متنی کانال، قبلاً ست نمی‌شد و 0 می‌ماند.
+                ConversationType = Chats.Messages.ConversationTyped.Channel,
                 Content = request.caption ?? string.Empty,
                 IsMine = false,
                 SendAt = message.CreateDate,

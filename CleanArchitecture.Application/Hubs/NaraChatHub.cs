@@ -1,4 +1,5 @@
 ﻿using CleanArchitecture.Application.Abstraction.Authentication;
+using CleanArchitecture.Application.Chats.Messages;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
 using CleanArchitecture.Application.Hubs.Abstractions;
@@ -287,6 +288,12 @@ namespace CleanArchitecture.Application.Hubs
                     .Select(x => new ChatMessageDto
                     {
                         Id = x.Id,
+                        // پیام‌های ازدست‌رفته هم باید مسیریابی درست داشته باشند،
+                        // وگرنه همان باگ بعد از هر reconnect برمی‌گردد.
+                        ScopeId = x.ConversationId.Value,
+                        ConversationType = x.Conversation.IsPrivate
+                            ? ConversationTyped.Private
+                            : ConversationTyped.group,
                         UserId = x.CreatedByUserId.Value,
                         Content = x.Content,
                         IsMine = false,
@@ -330,6 +337,10 @@ namespace CleanArchitecture.Application.Hubs
                                 .Select(x => new ChatMessageDto
                                 {
                                     Id = x.Id,
+                                    ScopeId = x.ConversationId.Value,
+                                    ConversationType = x.Conversation.IsPrivate
+                                        ? ConversationTyped.Private
+                                        : ConversationTyped.group,
                                     UserId = x.CreatedByUserId.Value,
                                     Content = x.Content,
                                     IsMine = false,

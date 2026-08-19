@@ -85,6 +85,7 @@ namespace CleanArchitecture.Application.Groups.Command.SendFileMessage
             var messageDto = new ChatMessageDto
             {
                 Id = message.Id,
+                ScopeId = conversation.Id,
                 Content = request.caption ?? string.Empty,
                 IsMine = false,
                 SendAt = message.CreateDate,

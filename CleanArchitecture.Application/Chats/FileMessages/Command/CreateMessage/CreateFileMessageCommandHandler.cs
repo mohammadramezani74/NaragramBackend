@@ -94,6 +94,7 @@ namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
             var messageDto = new ChatMessageDto
             {
                 Id = message.Id,
+                ScopeId = conversation.Id,
                 Content = request.caption ?? string.Empty,
                 IsMine = false,
                 SendAt = message.CreateDate,

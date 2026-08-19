@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Hubs.Models;
+﻿using CleanArchitecture.Application.Chats.Messages;
+using CleanArchitecture.Application.Hubs.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +18,12 @@ namespace CleanArchitecture.Application.Channels.Query
         public bool isEdited { get; set; }
         public Guid? ParentId { get; set; }
         public ChatFilesDto? FileContent { get; set; }
+
+        /// <summary>
+        /// همیشه Channel. لازم است چون کلاینت‌های قدیمی پیام زنده را با مقایسه‌ی
+        /// همین فیلد با پیام‌های لودشده تطبیق می‌دهند؛ اگر فقط سمت هاب ست شود و
+        /// اینجا نه، دو طرف نامساوی می‌شوند و پیام زنده‌ی کانال از کار می‌افتد.
+        /// </summary>
+        public ConversationTyped ConversationType { get; set; } = ConversationTyped.Channel;
     }
 }

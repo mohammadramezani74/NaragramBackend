@@ -1,4 +1,5 @@
 ﻿using CleanArchitecture.Application.Abstraction.Authentication;
+using CleanArchitecture.Application.Chats.Messages;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -40,6 +41,7 @@ namespace CleanArchitecture.Application.Channels.Query
                 .Select(x => new ChannelMessageResponse
                 {
                     Id = x.Id,
+                    ConversationType = ConversationTyped.Channel,
                     Content = x.Content,
                     SendAt = x.CreateDate,
                     SenderName = x.CreatedByUser.FirsName + " " + x.CreatedByUser.LastName,

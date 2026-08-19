@@ -75,6 +75,7 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
          
             var messageDto = new ChatMessageDto {
                 Id = message.Id,
+                ScopeId = conversation.Id,
                 Content = request.Message,
                 IsMine =false,
                 SendAt = message.CreateDate,

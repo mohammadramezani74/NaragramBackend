@@ -10,6 +10,18 @@ namespace CleanArchitecture.Application.Hubs.Models
     public sealed class ChatMessageDto
     {
         public Guid Id { get; set; }
+
+        /// <summary>
+        /// شناسه‌ی گفتگویی که پیام به آن تعلق دارد: ConversationId برای چت خصوصی
+        /// و گروه، ChannelId برای کانال.
+        ///
+        /// UserId برای این کار قابل اتکا نبود، چون معنایش بین مسیرها فرق می‌کرد:
+        /// در خصوصی و گروه شناسه‌ی فرستنده است و در کانال شناسه‌ی خود کانال. به
+        /// همین دلیل کلاینت نمی‌توانست بفهمد پیام مال کدام گفتگوست و پیام گروه
+        /// دیگر را در گروه باز نشان می‌داد.
+        /// </summary>
+        public Guid ScopeId { get; set; }
+
         public Guid UserId { get; set; }
         public string? SenderName { get; set; }
         public string Content { get; set; } = string.Empty;

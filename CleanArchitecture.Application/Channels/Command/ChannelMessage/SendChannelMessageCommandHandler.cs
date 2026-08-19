@@ -59,12 +59,17 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
             var messageDto = new ChatMessageDto
             {
                 Id = message.Id,
+                ScopeId = channel.Id,
                 Content = request.Message,
                 SendAt = message.CreateDate,
                 SenderName = Myuser.LastName + " " + Myuser.FirsName,
                 Type = 0,
                 UserId = channel.Id,
                 ParentId = message.ParentMessageId,
+                // قبلاً ست نمی‌شد و مقدارش 0 می‌ماند که عضو معتبر enum نیست.
+                // ChannelMessagesQuery هم همزمان اصلاح شد تا هر دو طرف Channel
+                // باشند و کلاینت‌های قدیمی نشکنند.
+                ConversationType = Chats.Messages.ConversationTyped.Channel,
             };
             try
             {
