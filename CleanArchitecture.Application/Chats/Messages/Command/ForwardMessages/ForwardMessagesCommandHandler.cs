@@ -59,6 +59,7 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages
             var sources = await _uow.Messages
                 .AsNoTracking()
                 .Include(m => m.ChatFiles)
+                 .Include(m => m.CreatedByUser)
                 .Where(m => sourceIds.Contains(m.Id)
                          && (m.Conversation!.Users.Any(u => u.UserId == myId)
                           || m.Channel!.Members.Any(mm => mm.UserId == myId)))
