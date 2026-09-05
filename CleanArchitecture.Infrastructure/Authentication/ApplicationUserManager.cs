@@ -4,6 +4,7 @@ using CleanArchitecture.Application.Abstraction.Sms;
 using CleanArchitecture.Application.Authentication.Command.ProcessToken;
 using CleanArchitecture.Application.Common.Exceptions;
 using CleanArchitecture.Application.Common.Models;
+using CleanArchitecture.Application.Common.Utilities.Text;
 using CleanArchitecture.Application.Common.unitOfWork;
 using CleanArchitecture.Application.Common.Utilities.Extensions.DateExtensions;
 using CleanArchitecture.Application.Hubs;
@@ -396,7 +397,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             }).ToList();
 
 
-            return response.Concat(userswithoutConversation)
+            var all = response.Concat(userswithoutConversation)
             .Concat(channels)
             .Concat(groups)
              .OrderByDescending(x => x.IsPin)
@@ -404,6 +405,28 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
             .ThenByDescending(x=>x.Avatar!=null)
             .ThenByDescending(x=>x.ConversationId!=Guid.Empty)
             .ToList();
+
+            // فیلتر جستجو. تا الان getUser.Search از اندپوینت تا اینجا پاس داده
+            // می‌شد ولی هیچ‌جا استفاده نمی‌شد، پس جستجو همیشه کل لیست را
+            // برمی‌گرداند.
+            //
+            // فیلتر روی نتیجه‌ی نهایی اعمال می‌شود تا هر چهار منبع — مخاطبان،
+            // کاربران بدون گفتگو، کانال‌ها و گروه‌ها — یکسان رفتار کنند. برای
+            // کانال و گروه، عنوانشان در FirstName نشسته است.
+            //
+            // Normalize همان چیزی است که جستجوی پیام‌ها استفاده می‌کند تا ی/ي و
+            // ک/ك و فاصله‌ی مجازی مثل هم رفتار کنند.
+            if (!string.IsNullOrWhiteSpace(getUser.Search))
+            {
+                var term = PersianText.Normalize(getUser.Search);
+
+                all = all.Where(x =>
+                        PersianText.Normalize($"{x.FirstName} {x.LastName} {x.UserName}")
+                                   .Contains(term))
+                         .ToList();
+            }
+
+            return all;
         }
         catch (Exception ex)
         {
