@@ -26,6 +26,12 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
                 .IsRequired()
                 .HasMaxLength(4096);
 
+            // برچسب «فوروارد شده». nullable است، پس اضافه شدنش به جدول موجود
+            // فقط تغییر متادیتاست و جدول را بازنویسی نمی‌کند.
+            builder.Property(m => m.ForwardedFromName)
+                .HasColumnType("nvarchar")
+                .HasMaxLength(200);
+
             builder.Property(m => m.CreateDate).IsRequired();
             builder.Property(m => m.Deleted).IsRequired();
 

@@ -28,6 +28,15 @@ namespace CleanArchitecture.Domain.Entities.Chat
         public ICollection<ChatFiles> ChatFiles { get; internal set; } = new List<ChatFiles>();
         public ICollection<Message> Replies { get; internal set; } = new List<Message>();
         public ICollection<MessageReaction> Reactions { get; private set; } = new List<MessageReaction>();
+        /// <summary>
+        /// نام فرستنده‌ی اصلی، فقط برای نمایش برچسب «فوروارد شده».
+        ///
+        /// عمداً اسنپ‌شات نام است و نه شناسه‌ی پیام مبدأ: پرش به پیام اصلی جزو
+        /// نیازمندی‌ها نبود، و این‌طور پیام فوروارد شده کاملاً مستقل می‌ماند و
+        /// با حذف پیام یا گفتگوی مبدأ خراب نمی‌شود.
+        /// </summary>
+        public string? ForwardedFromName { get; internal set; }
+
         public bool IsPinned { get; private set; }
         public DateTime? PinnedAt { get; private set; }
         public Guid? PinnedByUserId { get; private set; }
@@ -70,6 +79,18 @@ namespace CleanArchitecture.Domain.Entities.Chat
 
 
         }
+        /// <summary>
+        /// برچسب مبدأ را روی پیام تازه‌ی فوروارد شده می‌گذارد.
+        /// اگر پیام مبدأ خودش فوروارد بوده، همان برچسب اصلی منتقل می‌شود نه نام
+        /// واسطه — یعنی زنجیره‌ی فوروارد همیشه به نفر اول اشاره می‌کند.
+        /// </summary>
+        public void MarkAsForwarded(string? originalLabel, string senderName)
+        {
+            ForwardedFromName = string.IsNullOrWhiteSpace(originalLabel)
+                ? senderName
+                : originalLabel;
+        }
+
         public void Pin(Guid byUserId)
         {
             IsPinned = true;

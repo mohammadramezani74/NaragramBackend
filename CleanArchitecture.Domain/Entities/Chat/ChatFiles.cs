@@ -9,8 +9,11 @@ namespace CleanArchitecture.Domain.Entities.Chat
 {
     public sealed class ChatFiles:BaseEntity
     {
-        public Guid MessageId { get; set; }
-        public Message Message { get; set; }
+        // MessageId و Message حذف شدند: از این پس ارتباط از طریق جدول واسط
+        // MessageFiles برقرار می‌شود تا یک فایل بتواند به چند پیام تعلق داشته
+        // باشد (فوروارد بدون کپی کردن بایت‌ها).
+        public ICollection<Message> Messages { get; internal set; } = new List<Message>();
+
         public byte[]? FileData { get; set; }
         public byte[]? Thumbnail { get; set; }
         public string? FileName { get; set; }

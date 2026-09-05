@@ -44,9 +44,30 @@ namespace CleanArchitecture.Infrastructure.Purge
                         .ExecuteDeleteAsync(ct);
 
                     // ۲ — فایل‌ها (Restrict)
-                    await _uow.ChatFiles
-                        .Where(f => batch.Contains(f.MessageId))
+                    //
+                    // با اشتراک فایل، یک فایل ممکن است در گفتگوی دیگری هم
+                    // فوروارد شده باشد. پس اول شناسه‌ی فایل‌های این دسته را
+                    // برمی‌داریم، ردیف‌های واسط را پاک می‌کنیم، و بعد فقط
+                    // فایل‌هایی را حذف می‌کنیم که دیگر هیچ پیامی به آن‌ها
+                    // اشاره نمی‌کند. ترتیب اهمیت دارد: اگر اول فایل را حذف
+                    // کنیم کلید خارجی Restrict خطا می‌دهد.
+                    var candidateFileIds = await _uow.MessageFiles
+                        .Where(mf => batch.Contains(mf.MessageId))
+                        .Select(mf => mf.ChatFileId)
+                        .Distinct()
+                        .ToListAsync(ct);
+
+                    await _uow.MessageFiles
+                        .Where(mf => batch.Contains(mf.MessageId))
                         .ExecuteDeleteAsync(ct);
+
+                    if (candidateFileIds.Count > 0)
+                    {
+                        await _uow.ChatFiles
+                            .Where(f => candidateFileIds.Contains(f.Id)
+                                     && !_uow.MessageFiles.Any(mf => mf.ChatFileId == f.Id))
+                            .ExecuteDeleteAsync(ct);
+                    }
 
                     // ۳ — نشان «دیده شد» کانال (Cascade است ولی صریح مطمئن‌تر)
                     await _uow.ChannelMessageSeens

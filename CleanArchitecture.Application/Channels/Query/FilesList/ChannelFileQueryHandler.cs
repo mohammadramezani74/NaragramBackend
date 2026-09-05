@@ -16,7 +16,9 @@ namespace CleanArchitecture.Application.Channels.Query.FilesList
 
         public async Task<OperationResult<IReadOnlyList<ChannelFileItemResponse>>> Handle(ChannelFilesQuery request, CancellationToken cancellationToken)
         {
-            var files = await _uow.ChatFiles.Include(x => x.Message).Where(x => x.Message.ChannelId == request.ChannelId).Select(x =>
+            // فایل حالا می‌تواند به چند پیام تعلق داشته باشد، پس شرط روی
+            // «آیا پیامی از این کانال به آن اشاره می‌کند» است.
+            var files = await _uow.ChatFiles.Where(x => x.Messages.Any(m => m.ChannelId == request.ChannelId)).Select(x =>
 
                 new ChannelFileItemResponse
                 {

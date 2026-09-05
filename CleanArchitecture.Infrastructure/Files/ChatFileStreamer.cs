@@ -22,15 +22,22 @@ namespace CleanArchitecture.Infrastructure.Files
             // هر کاربری با داشتن FileId فایل هر گفتگویی را می‌گرفت.
             var row = await _context.Set<Domain.Entities.Chat.ChatFiles>()
                 .AsNoTracking()
+                // با اشتراک فایل، یک فایل می‌تواند در چند گفتگو باشد. اینجا
+                // بررسی می‌شود که کاربر به «یکی از» آن گفتگوها دسترسی دارد.
+                // برای فایل‌های عادی دقیقاً همان رفتار قبلی است، چون فقط یک
+                // پیام دارند. برای فایلی که فوروارد شده کمی بازتر است — اگر
+                // روزی خواستید سخت‌گیرانه‌تر شود، باید گفتگوی درخواست‌کننده هم
+                // به عنوان پارامتر بیاید و همان‌جا بررسی شود.
                 .Where(f => f.Id == fileId
-                         && (f.Message.Conversation.Users.Any(u => u.UserId == userId)
-                          || f.Message.Channel!.Members.Any(m => m.UserId == userId)))
+                         && f.Messages.Any(m =>
+                                m.Conversation!.Users.Any(u => u.UserId == userId)
+                             || m.Channel!.Members.Any(mm => mm.UserId == userId)))
                 .Select(f => new
                 {
                     f.FileName,
                     f.Extension,
                     Length = (long)EF.Functions.DataLength(f.FileData)!,
-                    Type = f.Message.MessageType
+                    Type = f.Messages.Select(m => m.MessageType).FirstOrDefault()
                 })
                 .FirstOrDefaultAsync(ct);
 

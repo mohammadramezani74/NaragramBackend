@@ -12,8 +12,8 @@ namespace CleanArchitecture.Application.Groups.Query.FilesList
 
         public async Task<OperationResult<IReadOnlyList<ChannelFileItemResponse>>> Handle(GroupFilesQuery request, CancellationToken cancellationToken)
         {
-           var attachedFiles= await _uow.ChatFiles.AsNoTracking().Include(x=>x.Message)
-                .Where(x=>x.Message.ConversationId==request.ConversationId).Select(x => new ChannelFileItemResponse
+           var attachedFiles= await _uow.ChatFiles.AsNoTracking()
+                .Where(x=>x.Messages.Any(m=>m.ConversationId==request.ConversationId)).Select(x => new ChannelFileItemResponse
            {
                Id = x.Id,
                FileName = x.FileName.Trim() + x.Extension

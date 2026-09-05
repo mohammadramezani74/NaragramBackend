@@ -25,6 +25,7 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<Conversation> Conversation { get;  }
         public DbSet<Message> Messages { get; }
         public DbSet<ChatFiles> ChatFiles { get; }
+        public DbSet<MessageFile> MessageFiles { get; }
         public DbSet<UserAvatar> UserAvatars { get; }
         public DbSet<MessageReaction> MessageReactions { get; }
         public DbSet<FireBaseToken> FireBaseTokens { get; }

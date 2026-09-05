@@ -29,8 +29,33 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
                 .WithMany()
                 .HasForeignKey(m => m.ModifiedById)
                 .OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(x=>x.Message).WithMany(x=>x.ChatFiles).
-                HasForeignKey(m => m.MessageId).OnDelete(DeleteBehavior.Restrict);
+            // رابطه‌ی چند‌به‌چند از طریق جدول واسط MessageFiles.
+            //
+            // نکته‌ی مهم: این یک «skip navigation» است، یعنی در کد همچنان
+            // message.ChatFiles یک ICollection<ChatFiles> ساده است. به همین
+            // دلیل تمام Includeها، پروجکشن‌ها و کوئری‌های موجود بدون تغییر کار
+            // می‌کنند و EF خودش موقع ذخیره‌ی پیام ردیف واسط را می‌سازد.
+            //
+            // هر دو سمت Restrict است تا حذف پیام یا فایل بدون پاک کردن ردیف
+            // واسط با خطا شکست بخورد، نه اینکه بی‌صدا داده را یتیم کند.
+            builder.HasMany(f => f.Messages)
+                   .WithMany(m => m.ChatFiles)
+                   .UsingEntity<MessageFile>(
+                        right => right.HasOne(mf => mf.Message)
+                                      .WithMany()
+                                      .HasForeignKey(mf => mf.MessageId)
+                                      .OnDelete(DeleteBehavior.Restrict),
+                        left => left.HasOne(mf => mf.ChatFile)
+                                    .WithMany()
+                                    .HasForeignKey(mf => mf.ChatFileId)
+                                    .OnDelete(DeleteBehavior.Restrict),
+                        join =>
+                        {
+                            join.ToTable("MessageFiles");
+                            join.HasKey(x => new { x.MessageId, x.ChatFileId });
+                            join.Property(x => x.CreateDate).HasColumnType("datetime2");
+                            join.HasIndex(x => x.ChatFileId);
+                        });
         }
     }
 }
