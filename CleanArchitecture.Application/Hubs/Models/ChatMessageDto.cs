@@ -33,6 +33,9 @@ namespace CleanArchitecture.Application.Hubs.Models
         public ChatFilesDto? FileContent { get; set; }
         public float? Latitude { get; set; }
         public float? Longitude { get; set; }
+        /// <summary>نام فرستنده‌ی اصلی؛ اگر پیام فوروارد نباشد null است.</summary>
+        public string? ForwardedFromName { get; set; }
+
         public ConversationTyped ConversationType { get; set; }
     }
     

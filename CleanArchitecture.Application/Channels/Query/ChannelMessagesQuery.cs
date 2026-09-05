@@ -42,6 +42,7 @@ namespace CleanArchitecture.Application.Channels.Query
                 {
                     Id = x.Id,
                     ConversationType = ConversationTyped.Channel,
+                    ForwardedFromName = x.ForwardedFromName,
                     Content = x.Content,
                     SendAt = x.CreateDate,
                     SenderName = x.CreatedByUser.FirsName + " " + x.CreatedByUser.LastName,

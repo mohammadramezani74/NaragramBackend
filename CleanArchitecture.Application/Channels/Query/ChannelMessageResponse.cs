@@ -19,6 +19,9 @@ namespace CleanArchitecture.Application.Channels.Query
         public Guid? ParentId { get; set; }
         public ChatFilesDto? FileContent { get; set; }
 
+        /// <summary>نام فرستنده‌ی اصلی؛ اگر پیام فوروارد نباشد null است.</summary>
+        public string? ForwardedFromName { get; set; }
+
         /// <summary>
         /// همیشه Channel. لازم است چون کلاینت‌های قدیمی پیام زنده را با مقایسه‌ی
         /// همین فیلد با پیام‌های لودشده تطبیق می‌دهند؛ اگر فقط سمت هاب ست شود و

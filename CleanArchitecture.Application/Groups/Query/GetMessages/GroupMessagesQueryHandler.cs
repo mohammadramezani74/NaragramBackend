@@ -99,6 +99,7 @@ namespace CleanArchitecture.Application.Groups.Query.GetMessages
                             FileSize = cf.FileSize.ToString()
                         })
                         .FirstOrDefault(),
+                    ForwardedFromName = x.ForwardedFromName,
                     ConversationType=ConversationTyped.group,
 
                     Reaction = x.Reactions

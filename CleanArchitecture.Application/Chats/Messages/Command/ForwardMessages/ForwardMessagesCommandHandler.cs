@@ -1,4 +1,4 @@
-using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -126,6 +126,7 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages
                         IsSeen = false,
                         SendAt = copy.CreateDate,
                         Type = (int)copy.MessageType,
+                        ForwardedFromName = copy.ForwardedFromName,
                         ConversationType = resolved.Type,
                         FileContent = src.ChatFiles.Select(f => new ChatFilesDto
                         {
