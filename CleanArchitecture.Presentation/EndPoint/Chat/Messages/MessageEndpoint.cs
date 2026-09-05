@@ -6,6 +6,7 @@ using CleanArchitecture.Application.Chats.Messages;
 using CleanArchitecture.Application.Chats.Messages.Command.ClearHistory;
 using CleanArchitecture.Application.Chats.Messages.Command.CreatMessage;
 using CleanArchitecture.Application.Chats.Messages.Command.DeleteMessage;
+using CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages;
 using CleanArchitecture.Application.Chats.Messages.Command.ModifiedMessage;
 using CleanArchitecture.Application.Chats.Messages.Command.NewReaction;
 using CleanArchitecture.Application.Chats.Messages.Command.PinMessage;
@@ -46,6 +47,17 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.Messages
                 var result = await sender.Send(command);
                 return Results.Ok(result);
             });
+            // فوروارد چند پیام به چند مقصد.
+            app.MapPost("/ForwardMessages", async ([FromServices] ISender sender,
+                [FromBody] ForwardMessagesCommand command, CancellationToken ct) =>
+            {
+                var result = await sender.Send(command, ct);
+
+                return result.IsSucceded
+                    ? Results.Ok(result)
+                    : Results.BadRequest(result.Message);
+            });
+
             app.MapPut("/EditMessage", async ([FromServices] ISender sender,
                 [FromBody] ModifiedMessageCommand command) =>
             {
