@@ -8,6 +8,7 @@ using CleanArchitecture.Application.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using CleanArchitecture.Domain.Enums;
+using CleanArchitecture.Application.Hubs.Models;
 
 namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
 {
@@ -67,18 +68,33 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            var others = conversation.Users
-                .Where(u => u.UserId != myId)
+            // پاک‌کننده هم باید رویداد را بگیرد. قبلاً با Where(u => u.UserId != myId)
+            // کنار گذاشته می‌شد، پس داده برای هر دو طرف پاک می‌شد ولی فقط صفحه‌ی
+            // مخاطب خالی می‌شد و پاک‌کننده تا رفرش، پیام‌های لودشده‌ی قبلی را
+            // می‌دید و فکر می‌کرد پاک‌سازی ناقص انجام شده.
+            var targets = conversation.Users
                 .Select(u => u.UserId.ToString())
                 .ToList();
 
-            if (others.Count > 0)
+            if (targets.Count > 0)
             {
                 try
                 {
                     await _hubContext.Clients
-                        .Users(others)
+                        .Users(targets)
                         .ChatHistoryCleared(request.ConversationId);
+
+                    // لیست مکالمات هم باید خالی شود، وگرنه متن آخرین پیام تا
+                    // رفرش باقی می‌ماند. هندلر این رویداد از قبل در کلاینت هست.
+                    await _hubContext.Clients
+                        .Users(targets)
+                        .LastMessageChanged(new LastMessageChangedDto
+                        {
+                            ScopeId = request.ConversationId,
+                            MessageId = null,
+                            Text = string.Empty,
+                            SentAt = null
+                        });
                 }
                 catch (Exception)
                 {

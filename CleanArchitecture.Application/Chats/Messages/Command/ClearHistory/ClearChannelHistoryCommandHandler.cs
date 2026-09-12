@@ -7,6 +7,7 @@ using CleanArchitecture.Application.Hubs.Abstractions;
 using CleanArchitecture.Application.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using CleanArchitecture.Application.Hubs.Models;
 
 namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
 {
@@ -51,18 +52,29 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ClearHistory
 
             await _uow.SaveChangesAsync(cancellationToken);
 
-            var others = channel.Members
-                .Where(m => m.UserId != myId)
+            // مثل مسیر گفتگو، پاک‌کننده هم باید رویداد را بگیرد وگرنه صفحه‌ی
+            // خودش تا رفرش خالی نمی‌شود.
+            var targets = channel.Members
                 .Select(m => m.UserId.ToString())
                 .ToList();
 
-            if (others.Count > 0)
+            if (targets.Count > 0)
             {
                 try
                 {
                     await _hubContext.Clients
-                        .Users(others)
+                        .Users(targets)
                         .ChatHistoryCleared(request.ChannelId);
+
+                    await _hubContext.Clients
+                        .Users(targets)
+                        .LastMessageChanged(new LastMessageChangedDto
+                        {
+                            ScopeId = request.ChannelId,
+                            MessageId = null,
+                            Text = string.Empty,
+                            SentAt = null
+                        });
                 }
                 catch (Exception) { }
             }
