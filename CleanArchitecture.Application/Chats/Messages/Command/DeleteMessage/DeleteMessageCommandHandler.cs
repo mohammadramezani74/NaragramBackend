@@ -50,7 +50,24 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.DeleteMessage
             }
             var message = await _uow.Messages.Include(m=>m.Conversation).AsNoTracking().Where(x => x.Id == request.MessageId).FirstOrDefaultAsync();
            await _uow.Messages.Where(x=>x.Id==request.MessageId).ExecuteDeleteAsync(cancellationToken);
+
+            // اسنپ‌شات آخرین پیام روی گفتگو/کانال با حذف پیام به‌روز نمی‌شد، پس
+            // متن پیام پاک‌شده در لیست مکالمات باقی می‌ماند. حالا از روی پیام‌های
+            // باقی‌مانده بازسازی می‌شود و به پیام قبلی برمی‌گردد؛ اگر پیامی نمانده
+            // باشد متن خالی می‌شود و گفتگو در لیست می‌ماند.
+            var snapshot = message!.ChannelId is not null
+                ? await LastMessageSync.SyncChannelAsync(_uow, message.ChannelId.Value, cancellationToken)
+                : await LastMessageSync.SyncConversationAsync(_uow, message.ConversationId!.Value, cancellationToken);
+
             await _uow.SaveChangesAsync(cancellationToken);
+
+            var lastMessageDto = new LastMessageChangedDto
+            {
+                ScopeId = snapshot.ScopeId,
+                MessageId = snapshot.MessageId,
+                Text = snapshot.Text,
+                SentAt = snapshot.SentAt
+            };
 
             var isGroups = message.Conversation != null ? !message.Conversation.IsPrivate : false;
             if (isGroups)
@@ -67,9 +84,27 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.DeleteMessage
             else
             {
                 await _hubContext.Clients.Groups(message.ChannelId.ToString()).DeletedMessageReceived(request.MessageId);
-
-              
             }
+
+            // برخلاف DeletedMessageReceived، این یکی به فرستنده هم می‌رسد؛ لیست
+            // مکالمات خودِ حذف‌کننده هم باید عوض شود.
+            if (message.ChannelId is not null)
+            {
+                await _hubContext.Clients.Group(message.ChannelId.ToString()!)
+                    .LastMessageChanged(lastMessageDto);
+            }
+            else if (isGroups)
+            {
+                await _hubContext.Clients.Group(message.ConversationId.ToString()!)
+                    .LastMessageChanged(lastMessageDto);
+            }
+            else
+            {
+                var targets = new List<string> { myId.ToString(), request.OtherUserId.ToString() };
+
+                await _hubContext.Clients.Users(targets).LastMessageChanged(lastMessageDto);
+            }
+
             return new OperationResult().succedded();
         }
     }

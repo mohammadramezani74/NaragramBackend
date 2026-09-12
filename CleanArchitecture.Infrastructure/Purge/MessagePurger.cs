@@ -1,4 +1,5 @@
 ﻿using CleanArchitecture.Application.Abstraction.Purge;
+using CleanArchitecture.Application.Chats.Messages;
 using CleanArchitecture.Application.Common.unitOfWork;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -14,11 +15,27 @@ namespace CleanArchitecture.Infrastructure.Purge
         {
             private readonly IApplicationUnitOfWork _uow = uow;
 
-            public Task<int> PurgeConversationMessagesAsync(Guid conversationId, CancellationToken ct = default)
-                => PurgeAsync(m => m.ConversationId == conversationId, ct);
+            public async Task<int> PurgeConversationMessagesAsync(Guid conversationId, CancellationToken ct = default)
+            {
+                var deleted = await PurgeAsync(m => m.ConversationId == conversationId, ct);
 
-            public Task<int> PurgeChannelMessagesAsync(Guid channelId, CancellationToken ct = default)
-                => PurgeAsync(m => m.ChannelId == channelId, ct);
+                // بدون این، متن آخرین پیام روی گفتگو باقی می‌ماند و بعد از پاک
+                // کردن تاریخچه همچنان در لیست مکالمات دیده می‌شود.
+                await LastMessageSync.SyncConversationAsync(_uow, conversationId, ct);
+                await _uow.SaveChangesAsync(ct);
+
+                return deleted;
+            }
+
+            public async Task<int> PurgeChannelMessagesAsync(Guid channelId, CancellationToken ct = default)
+            {
+                var deleted = await PurgeAsync(m => m.ChannelId == channelId, ct);
+
+                await LastMessageSync.SyncChannelAsync(_uow, channelId, ct);
+                await _uow.SaveChangesAsync(ct);
+
+                return deleted;
+            }
 
             private async Task<int> PurgeAsync(
                 System.Linq.Expressions.Expression<Func<Domain.Entities.Chat.Message, bool>> scope,

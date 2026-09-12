@@ -19,6 +19,13 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
         Task MessagedReceived(ChatMessageDto message);
         Task EditedMessageReceived(EditedMessageDto message);
         Task DeletedMessageReceived(Guid MessageId);
+
+        /// <summary>
+        /// آخرین پیام گفتگو عوض شد (حذف پیام یا پاک کردن تاریخچه).
+        /// متد جدا اضافه شد و امضای DeletedMessageReceived دست نخورد، تا
+        /// کلاینت‌های کش‌شده که این را نمی‌شناسند نشکنند و صرفاً نادیده بگیرند.
+        /// </summary>
+        Task LastMessageChanged(LastMessageChangedDto Message);
         Task MessagedSeenReceived(List<Guid> MessageId);
         Task IncreaseMessageCount(Guid UserId);
         Task ReceivedNotifications(NotificationModelDto notify);
