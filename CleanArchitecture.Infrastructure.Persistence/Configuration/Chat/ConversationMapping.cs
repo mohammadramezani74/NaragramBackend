@@ -14,6 +14,17 @@ internal sealed class ConversationMapping : IEntityTypeConfiguration<Conversatio
 
 
         builder.HasKey(c => c.Id);
+
+        // قید یکتای جفت کاربران در گفتگوی خصوصی. فیلتر لازم است چون گروه‌ها و
+        // کانال‌ها هر دو ستون را null دارند و بدون فیلتر با هم تداخل می‌کنند.
+        //
+        // این تنها چیزی است که واقعاً جلوی گفتگوی تکراری را می‌گیرد؛ بررسی در
+        // کد بین خواندن و ذخیره فاصله دارد و دو درخواست هم‌زمان از آن رد می‌شوند.
+        builder.HasIndex(c => new { c.UserAId, c.UserBId })
+               .IsUnique()
+               .HasFilter("[IsPrivate] = 1 AND [UserAId] IS NOT NULL AND [UserBId] IS NOT NULL")
+               .HasDatabaseName("UX_Conversations_PrivatePair");
+
         builder.Property(x => x.LastMessageText).HasMaxLength(100);
         builder.Property(x => x.Title).IsRequired().HasMaxLength(500);
         builder.Property(x => x.UserName).HasMaxLength(140);

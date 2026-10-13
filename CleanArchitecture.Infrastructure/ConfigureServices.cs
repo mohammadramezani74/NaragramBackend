@@ -42,6 +42,12 @@ public static class ConfigureServices
             confige.AddJob<ProcessOutBoxMessagesJob>(job)
             .AddTrigger(t => t.ForJob(job)
             .WithSimpleSchedule(s => s.WithIntervalInSeconds(10).RepeatForever()));
+
+            // یادآوری کارهای شخصی؛ هر ۲۰ ثانیه یادآوری‌های رسیده را می‌فرستد.
+            var reminders = new JobKey(nameof(SendContactTaskRemindersJob));
+            confige.AddJob<SendContactTaskRemindersJob>(reminders)
+            .AddTrigger(t => t.ForJob(reminders)
+            .WithSimpleSchedule(s => s.WithIntervalInSeconds(20).RepeatForever()));
             confige.UseMicrosoftDependencyInjectionJobFactory();
         });
         services.AddCustomHealthChecks(configuration);

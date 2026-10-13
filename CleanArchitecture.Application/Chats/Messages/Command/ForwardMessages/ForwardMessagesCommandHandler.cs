@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Channels.Rules;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -188,6 +189,10 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages
                 if (!channel.Members.Any(m => m.UserId == myId))
                     return new ResolvedTarget { Error = "شما عضو این کانال نیستید!" };
 
+                // عضو عادی کانال فقط خواننده است؛ فوروارد هم نوعی ارسال است.
+                if (!await ChannelPermissions.CanPostAsync(_uow, channel.Id, myId, ct))
+                    return new ResolvedTarget { Error = ChannelPermissions.CannotPostMessage };
+
                 return new ResolvedTarget
                 {
                     Ok = true,
@@ -232,13 +237,16 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages
             if (other is null)
                 return new ResolvedTarget { Error = "کاربر مقصد یافت نشد!" };
 
-            var pairIds = new List<Guid> { myId, other.Id };
+            // جستجو با جفت مرتب‌شده: یک seek روی ایندکس یکتا، به‌جای بررسی
+            // زیرمجموعه‌ی کاربران برای هر گفتگو.
+            var a = myId.CompareTo(other.Id) <= 0 ? myId : other.Id;
+            var b = myId.CompareTo(other.Id) <= 0 ? other.Id : myId;
 
             var existing = await _uow.Conversation
                 .Include(c => c.Users)
                 .FirstOrDefaultAsync(c => c.IsPrivate
-                                       && c.Users.Count == 2
-                                       && c.Users.All(u => pairIds.Contains(u.UserId)), ct);
+                                       && c.UserAId == a
+                                       && c.UserBId == b, ct);
 
             if (existing is null)
             {
@@ -247,6 +255,26 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages
                 var me = await _userManager.GetUserBy(myId);
                 existing = Conversation.Create(me!, other);
                 _uow.Conversation.Add(existing);
+
+                try
+                {
+                    await _uow.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateException)
+                {
+                    // درخواست هم‌زمان دیگری زودتر ساخته و ایندکس یکتا جلوی
+                    // دومی را گرفت. همان را می‌خوانیم تا کاربر خطا نبیند.
+                    _uow.Conversation.Entry(existing).State = EntityState.Detached;
+
+                    existing = await _uow.Conversation
+                        .Include(c => c.Users)
+                        .FirstOrDefaultAsync(c => c.IsPrivate
+                                               && c.UserAId == a
+                                               && c.UserBId == b, ct);
+
+                    if (existing is null)
+                        return new ResolvedTarget { Error = "ساخت گفتگو ناموفق بود!" };
+                }
             }
 
             return new ResolvedTarget

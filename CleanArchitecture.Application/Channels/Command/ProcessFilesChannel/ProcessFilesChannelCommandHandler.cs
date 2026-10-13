@@ -1,4 +1,6 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Channels.Rules;
+using CleanArchitecture.Application.Abstraction;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -26,7 +28,8 @@ namespace CleanArchitecture.Application.Channels.Command.ProcessFilesChannel
     internal sealed class ProcessFilesChannelCommandHandler(IApplicationUserManager userManager,
          IApplicationUnitOfWork uow,
          IHttpContextAccessor httpContext,
-         IHubContext<NaraHub, IChatHubClient> hubContext) : ICommandHandler<ProcessFilesChannelCommand, CreateFileMessageResponse>
+         IHubContext<NaraHub, IChatHubClient> hubContext,
+         INotificationService notifService) : ICommandHandler<ProcessFilesChannelCommand, CreateFileMessageResponse>
     {
         private readonly IApplicationUserManager _userManager = userManager;
         private readonly IApplicationUnitOfWork _uow = uow;
@@ -42,6 +45,10 @@ namespace CleanArchitecture.Application.Channels.Command.ProcessFilesChannel
             var channel = await _uow.Channels.SingleOrDefaultAsync (x => x.Id == request.ChannelId, cancellationToken);
             if (channel == null)
                 return OperationResult.Failure<CreateFileMessageResponse>(op.Failed("مکالمه مورد نظر یافت نشد!"));
+
+            // قبل از ذخیره‌ی فایل روی دیسک، تا فایل یتیم هم نماند.
+            if (!await ChannelPermissions.CanPostAsync(_uow, request.ChannelId, MyId, cancellationToken))
+                return OperationResult.Failure<CreateFileMessageResponse>(op.Forbiden(ChannelPermissions.CannotPostMessage));
             var fileExtensions = Path.GetExtension(request.file.FileName);
             var type = MessageType.Image;
             var file = new ChatFiles();
@@ -98,6 +105,14 @@ namespace CleanArchitecture.Application.Channels.Command.ProcessFilesChannel
 
             await _hubContext.Clients.GroupExcept(channel.Id.ToString(), excludedConnections).IncreaseMessageCount(channel.Id);
             await _hubContext.Clients.GroupExcept(channel.Id.ToString(),excludedConnections).MessagedReceived(messageDto);
+
+            // پست فایل در کانال قبلاً هیچ اعلانی نداشت.
+            await ChannelNotifier.NotifyNewPostAsync(
+                _uow, notifService, _hubContext,
+                channel.Id, channel.Title, MyId,
+                ChannelNotifier.FileBody(request.caption, type),
+                $"{scheme}://{hostName}/api/v1/chatfiles/{channel.Id}/True/getAvatar",
+                cancellationToken);
 
             return new CreateFileMessageResponse { FileId = file.Id, MessageType = type, MessageId = message.Id };
         }

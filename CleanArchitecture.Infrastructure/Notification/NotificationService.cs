@@ -62,6 +62,74 @@ namespace CleanArchitecture.Infrastructure.Notification
          
         }
 
+        public async Task SendReminder(string token, string title, string body, string tag)
+        {
+            var message = new FirebaseAdmin.Messaging.Message()
+            {
+                Token = token,
+                Notification = new FirebaseAdmin.Messaging.Notification
+                {
+                    Title = title,
+                    Body = body,
+                },
+                Data = new Dictionary<string, string>
+                {
+                    ["kind"] = "task-reminder",
+                    ["tag"] = tag,
+                },
+                Webpush = new WebpushConfig
+                {
+                    Notification = new WebpushNotification
+                    {
+                        Title = title,
+                        Body = body,
+                        Tag = tag,
+                        RequireInteraction = true,
+                        Direction = Direction.RightToLeft,
+                    },
+                    FcmOptions = new WebpushFcmOptions
+                    {
+                        Link = "https://naragram.irannara.com/chat",
+                    },
+                },
+            };
+
+            try
+            {
+                await FirebaseMessaging.DefaultInstance.SendAsync(message);
+            }
+            catch (Exception)
+            {
+                // توکن منقضی یا نامعتبر؛ اعلان داخل برنامه همچنان می‌رسد.
+            }
+        }
+
+        public async Task SendToMany(IReadOnlyCollection<string> tokens, string title, string body)
+        {
+            try
+            {
+                foreach (var chunk in tokens.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().Chunk(500))
+                {
+                    var message = new MulticastMessage
+                    {
+                        Tokens = chunk,
+                        Notification = new FirebaseAdmin.Messaging.Notification
+                        {
+                            Title = title,
+                            Body = body,
+                            ImageUrl = @"https://cdn.tarhbama.com/1401/12/25/Image/10/filelogo.jpg"
+                        },
+                    };
+
+                    await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message);
+                }
+            }
+            catch (Exception)
+            {
+                // اعلان Firebase اختیاری است؛ اعلان داخل برنامه جدا می‌رسد.
+            }
+        }
+
         public async Task StoreFCMtoken(string token)
         {
             var myUser = _userManager.UserId!.Value;

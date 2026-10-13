@@ -487,6 +487,99 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.ToTable("ChatFiles", (string)null);
                 });
 
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.ContactTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DoneAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsDone")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedByBrowserName")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ModifiedByIp")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("RemindAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReminderSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SourceMessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SourcePreview")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("SourceSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContactId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ModifiedById");
+
+                    b.HasIndex("RemindAtUtc")
+                        .HasDatabaseName("IX_ContactTasks_PendingReminders")
+                        .HasFilter("[RemindAtUtc] IS NOT NULL AND [ReminderSentAtUtc] IS NULL AND [IsDone] = 0");
+
+                    b.HasIndex("OwnerId", "ContactId", "IsDone")
+                        .HasDatabaseName("IX_ContactTasks_Owner_Contact_Done");
+
+                    b.ToTable("ContactTasks", (string)null);
+                });
+
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.Conversation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -549,6 +642,12 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<Guid?>("UserAId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserBId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("UserName")
                         .HasMaxLength(140)
                         .HasColumnType("nvarchar(140)");
@@ -558,6 +657,11 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("ModifiedById");
+
+                    b.HasIndex("UserAId", "UserBId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Conversations_PrivatePair")
+                        .HasFilter("[IsPrivate] = 1 AND [UserAId] IS NOT NULL AND [UserBId] IS NOT NULL");
 
                     b.ToTable("Conversation");
                 });
@@ -1546,6 +1650,39 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("ModifiedBy");
+                });
+
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.ContactTask", b =>
+                {
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "Contact")
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CleanArchitecture.Domain.Entities.Identity.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Contact");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("ModifiedBy");
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.Chat.Conversation", b =>

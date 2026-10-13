@@ -38,5 +38,14 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
         Task ReceiveNewChannel(GetUserResponse user);
         Task ChatHistoryCleared(Guid conversationOrChannelId);
         Task MessagePinChanged(Guid scopeId, Guid messageId, bool pinned);
+
+        /// <summary>
+        /// کارهای شخصیِ کاربر درباره‌ی یک مخاطب عوض شد. فقط به دستگاه‌های خودِ
+        /// صاحب کارها فرستاده می‌شود تا تب‌ها و گوشی‌اش هم‌گام بمانند.
+        /// </summary>
+        Task ContactTasksChanged(Guid contactId);
+
+        /// <summary>زمان یادآوری یکی از کارهای کاربر رسید.</summary>
+        Task TaskReminder(CleanArchitecture.Application.ContactTasks.TaskReminderDto reminder);
     }
 }

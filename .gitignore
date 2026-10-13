@@ -397,3 +397,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 /CleanArchitecture.Presentation/Serilog
+CleanArchitecture.Presentation/adminsdk.json

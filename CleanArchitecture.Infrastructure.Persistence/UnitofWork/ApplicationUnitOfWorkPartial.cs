@@ -28,5 +28,6 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<ChannelInvite> ChannelInvites => _context.Set<ChannelInvite>();
         public DbSet<ChannelAvatar> ChannelAvatars => _context.Set<ChannelAvatar>();
         public DbSet<ConversationAvatar> ConversationAvatar => _context.Set<ConversationAvatar>();
+        public DbSet<ContactTask> ContactTasks => _context.Set<ContactTask>();
     }
 }

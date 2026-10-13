@@ -55,10 +55,24 @@ namespace CleanArchitecture.Domain.Entities.Chat
         /// <param name="firstOne"></param>
         /// <param name="SecondsOne"></param>
         /// <returns></returns>
+        /// <summary>
+        /// جفت کاربران گفتگوی خصوصی، همیشه مرتب‌شده (کوچک‌تر در A).
+        /// برای گروه و کانال null است.
+        ///
+        /// این دو ستون تکرار داده‌ی ConversationUsers هستند و عمدی‌اند: ایندکس
+        /// یکتا نمی‌تواند به جدول دیگری نگاه کند، و بدون قید یکتا در سطح
+        /// دیتابیس، دو درخواست هم‌زمان هر دو «گفتگو پیدا نشد» می‌گیرند و دو
+        /// گفتگوی موازی می‌سازند. مرتب بودن باعث می‌شود ترتیب ورودی مهم نباشد.
+        /// </summary>
+        public Guid? UserAId { get; set; }
+        public Guid? UserBId { get; set; }
+
         public static Conversation Create(User firstOne,User SecondsOne)
      => new Conversation
      {
          IsPrivate = true,
+         UserAId = firstOne.Id.CompareTo(SecondsOne.Id) <= 0 ? firstOne.Id : SecondsOne.Id,
+         UserBId = firstOne.Id.CompareTo(SecondsOne.Id) <= 0 ? SecondsOne.Id : firstOne.Id,
          Title = SecondsOne.FirsName+" "+SecondsOne.LastName,
          CreateDate = DateTime.Now,
          Deleted = false,

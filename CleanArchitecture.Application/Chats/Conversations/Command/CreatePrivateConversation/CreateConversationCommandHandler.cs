@@ -31,14 +31,15 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivat
             OurChatIds.Add(me.Id);
             var other = await _userManager.GetUserBy(request.ToUserId);
             OurChatIds.Add(other.Id);
+            // جستجو با جفت مرتب‌شده روی ایندکس یکتا، به‌جای بررسی زیرمجموعه‌ی
+            // کاربرانِ هر گفتگو.
+            var a = me.Id.CompareTo(other.Id) <= 0 ? me.Id : other.Id;
+            var b = me.Id.CompareTo(other.Id) <= 0 ? other.Id : me.Id;
+
                 var ExistedConverrsation = await _uow.Conversation.AsNoTracking()
             .Include(x => x.Users)
             .ThenInclude(x => x.User.UserAvatars)
-            .Where(x =>
-             x.IsPrivate &&
-                x.Users.Count == 2 && 
-                x.Users.All(u => OurChatIds.Contains(u.UserId))
-            )
+            .Where(x => x.IsPrivate && x.UserAId == a && x.UserBId == b)
             .FirstOrDefaultAsync(cancellationToken);
                 if (ExistedConverrsation != null) 
             {
@@ -54,13 +55,38 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivat
             var privateConversation = Domain.Entities.Chat.Conversation
                   .Create(me!, other!);
             _uow.Conversation.Add(privateConversation);
-          var res=  await _uow.SaveChangesAsync(cancellationToken);
-            if (res.IsSuccess)
+
+            try
             {
-                var result = _mapper.Map<ConverSationResponse>(privateConversation);
-                result.Title = string.Concat(other.LastName, " ", other.FirsName);
-            
-                return result;
+              var res=  await _uow.SaveChangesAsync(cancellationToken);
+                if (res.IsSuccess)
+                {
+                    var result = _mapper.Map<ConverSationResponse>(privateConversation);
+                    result.Title = string.Concat(other.LastName, " ", other.FirsName);
+
+                    return result;
+                }
+            }
+            catch (DbUpdateException)
+            {
+                // درخواست هم‌زمان دیگری زودتر ساخته و ایندکس یکتا جلوی دومی را
+                // گرفت. همان گفتگو را برمی‌گردانیم تا کاربر خطا نبیند — این
+                // دقیقاً همان حالتی است که تا الان گفتگوی تکراری می‌ساخت.
+                _uow.Conversation.Entry(privateConversation).State = EntityState.Detached;
+
+                var winner = await _uow.Conversation.AsNoTracking()
+                    .Include(x => x.Users)
+                    .ThenInclude(x => x.User.UserAvatars)
+                    .Where(x => x.IsPrivate && x.UserAId == a && x.UserBId == b)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (winner is not null)
+                {
+                    var result = _mapper.Map<ConverSationResponse>(winner);
+                    result.Title = string.Concat(other.LastName, " ", other.FirsName);
+
+                    return result;
+                }
             }
             return OperationResult.Failure<ConverSationResponse>(new OperationResult().Failed("عملیات با خطا مواجه شد!"));
             }

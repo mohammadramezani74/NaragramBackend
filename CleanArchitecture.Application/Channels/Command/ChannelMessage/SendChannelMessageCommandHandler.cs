@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Channels.Rules;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -9,6 +10,7 @@ using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic;
@@ -24,7 +26,8 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
     internal sealed class SendChannelMessageCommandHandler(IApplicationUnitOfWork uow
         ,IApplicationUserManager usermanager,
         IHubContext<NaraHub, IChatHubClient> hubContext,
-        INotificationService notifService) : ICommandHandler<SendChannelMessageCommand,Guid>
+        INotificationService notifService,
+        IHttpContextAccessor httpContext) : ICommandHandler<SendChannelMessageCommand,Guid>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _usermanager = usermanager;
@@ -35,6 +38,9 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
         {
             var op = new OperationResult();
             var MyId = _usermanager.UserId!.Value;
+            if (!await ChannelPermissions.CanPostAsync(_uow, request.ChannelId, MyId, cancellationToken))
+                return OperationResult.Failure<Guid>(op.Forbiden(ChannelPermissions.CannotPostMessage));
+
             var AllMembers=await _uow.ChannelMembers.Where(x=>x.ChannelId == request.ChannelId).ToListAsync();
             foreach (var member in AllMembers)
             {
@@ -71,23 +77,15 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
                 // باشند و کلاینت‌های قدیمی نشکنند.
                 ConversationType = Chats.Messages.ConversationTyped.Channel,
             };
-            try
-            {
-                if (members.Any()) {
-                var firebaseTokens = await _uow.FireBaseTokens.AsNoTracking().Where(x=> members.Contains(x.UserId)).ToListAsync();
-                if (firebaseTokens.Any())
-                {
-                    foreach (var token in firebaseTokens)
-                    {
-                       await _notifService.Send(token.Token, messageDto.Content, channel.Title);
-                    }
-                } }
-            }
-            catch (Exception ex)
-            {
-
-
-            }
+            // قبلاً: به خودِ فرستنده هم اعلان می‌رفت، اعلان مرورگرِ صفحه‌ی باز اصلاً
+            // ارسال نمی‌شد، و ارسال‌ها یکی‌یکی await می‌شد و درخواست فرستنده را
+            // برای کانال‌های پرعضو طولانی می‌کرد.
+            await ChannelNotifier.NotifyNewPostAsync(
+                _uow, _notifService, _hubContext,
+                channel.Id, channel.Title, MyId,
+                request.Message,
+                ChannelAvatarUrl(channel.Id),
+                cancellationToken);
 
             var excludedConnections = NaraHub.GetUserConnections(MyId);
 
@@ -100,6 +98,14 @@ namespace CleanArchitecture.Application.Channels.Command.ChannelMessage
                 .MessagedReceived(messageDto);
             return message.Id;
         }
+        private string? ChannelAvatarUrl(Guid channelId)
+        {
+            var request = httpContext.HttpContext?.Request;
+            return request is null
+                ? null
+                : $"{request.Scheme}://{request.Host.Value}/api/v1/chatfiles/{channelId}/True/getAvatar";
+        }
+
         private static string GetMessageFormat(MessageType messageType)
         {
             string Messagetype = messageType switch

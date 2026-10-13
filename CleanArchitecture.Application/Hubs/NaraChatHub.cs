@@ -19,6 +19,7 @@ namespace CleanArchitecture.Application.Hubs
         ,ILogger<NaraHub> looger,IHttpContextAccessor httpContextAccessor) : Hub<IChatHubClient>, IChatHubServer
     {
         private static readonly ConcurrentDictionary<Guid, UserDto> _onlineUsers = new ConcurrentDictionary<Guid, UserDto>();
+        private static readonly object _presenceLock = new();
         private readonly IApplicationUserManager usermanager = usermanager;
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly ILogger<NaraHub> _loger = looger;
@@ -114,91 +115,63 @@ namespace CleanArchitecture.Application.Hubs
         {
             try
             {
-                var connectionId = Context.ConnectionId;
+                // کاربر فقط وقتی آفلاین حساب می‌شود که آخرین اتصالش قطع شود.
+                //
+                // قبلاً با قطع شدن هر اتصالی، کل کاربر آفلاین می‌شد. کسی که دو
+                // تب یا دو دستگاه داشت، یا اتصالش خودکار دوباره وصل شده بود و
+                // قطعی اتصال قدیمی‌اش دیرتر به سرور رسید، آفلاین نشان داده می‌شد
+                // در حالی که آنلاین بود، و «آخرین بازدید» روی زمان همان قطعی
+                // قدیمی می‌ماند.
+                var (userId, wentOffline) = RemoveConnection(Context.ConnectionId);
 
-
-                var user = _onlineUsers.Values.FirstOrDefault(u =>
-                    u.ConnectionIds.Contains(connectionId));
-                if (user == null)
-                {
+                if (userId is null || !wentOffline)
                     return;
-                }
-                var connectUser = await usermanager.GetUserBy(user.id);
-                if (connectUser != null)
-                {
-                    connectUser.UpdatelastLoginDate();
-                    _onlineUsers.Remove(connectUser.Id, out var userd);
 
-                    await Clients.Others.UserIsOffline(connectUser.Id);
-                    await Clients.Others.SetLastSeenUser(new LastSeenModelDto(connectUser.Id, connectUser.LastLoginDate!.Value.DateTime));
-                    await _uow.SaveChangesAsync();
-
-                }
-
-                else
-                {
-                    _loger.LogError("User is Empty!!");
-                }
+                await MarkOfflineAsync(userId.Value);
             }
             catch (Exception e)
             {
-
                 _loger.LogError($" u have exception on disconnected : {e.Message}");
             }
-
         }
         public async Task SetUserOnline(UserDto user)
         {
             var connectionId = Context.ConnectionId;
-            bool isNewlyOnline = false;
+            var userId = CurrentUserId() ?? user.id;
+            bool isNewlyOnline;
+            List<UserDto> snapshot;
 
-            _onlineUsers.AddOrUpdate(
-                user.id,
-                (userId) =>
+            // همه‌ی تغییرات فهرست آنلاین‌ها زیر یک قفل انجام می‌شود تا وصل شدن
+            // و قطع شدن هم‌زمانِ یک کاربر (مثلاً اتصال مجدد خودکار) همدیگر را
+            // خراب نکنند. این کارها کم‌تکرارند، پس قفل سراسری هزینه‌ای ندارد.
+            lock (_presenceLock)
+            {
+                if (_onlineUsers.TryGetValue(userId, out var existing))
                 {
+                    if (!existing.ConnectionIds.Contains(connectionId))
+                        existing.ConnectionIds.Add(connectionId);
 
-                    var newUser = new UserDto(user.id, user.Name)
+                    isNewlyOnline = existing.ConnectionIds.Count == 1;
+                }
+                else
+                {
+                    _onlineUsers[userId] = new UserDto(userId, user.Name)
                     {
                         ConnectionIds = { connectionId }
                     };
                     isNewlyOnline = true;
-                    return newUser;
-                },
-                (userId, existingUser) =>
-                {
+                }
 
-                    if (!existingUser.ConnectionIds.Contains(connectionId))
-                    {
-                        existingUser.ConnectionIds.Add(connectionId);
+                snapshot = _onlineUsers.Values.ToList();
+            }
 
-         
-                        if (existingUser.ConnectionIds.Count == 1)
-                        {
-                            isNewlyOnline = true;
-                        }
-                    }
-                    return existingUser;
-                });
+            await Clients.Caller.OnlineUserList(snapshot);
 
-   
-            await Clients.Caller.OnlineUserList(_onlineUsers.Values);
-
- 
             if (isNewlyOnline)
             {
                 await Clients.Others.UserConnected(user);
-                await Clients.Others.UserIsOnline(user.id);
+                await Clients.Others.UserIsOnline(userId);
             }
-
-            //await Clients.Caller.OnlineUserList(_onlineUsers.Values);
-            //if (!_onlineUsers.ContainsKey(user.id))
-            //{  
-            //    user.ConnectionId=Context.ConnectionId;
-            //    _onlineUsers.TryAdd(user.id, user);
-            //    await Clients.Others.UserConnected(user);
-            //    await Clients.Others.UserIsOnline(user.id);
-            //}
-
         }
         public async Task MessageSeen(MessageSeenDto messagesForSeen)
         {
@@ -208,8 +181,15 @@ namespace CleanArchitecture.Application.Hubs
 
             if (conversation is null) return;
 
+            // «من» از توکن خوانده می‌شود، نه از MyId که کلاینت می‌فرستد؛
+            // وگرنه هر کلاینتی می‌توانست شمارنده‌ی کاربر دیگری را صفر کند.
+            if (CurrentUserId() is not Guid myId) return;
+
             // ۱ — شمارنده‌ی خودم را صفر کن. بی‌قید و شرط.
-            var me = conversation.Users.FirstOrDefault(x => x.UserId == messagesForSeen.MyId);
+            var me = conversation.Users.FirstOrDefault(x => x.UserId == myId);
+
+            // کسی که عضو این گفتگو نیست نباید تیک خوانده‌شدن برای آن بفرستد
+            if (me is null) return;
             if (me is not null && me.UnreadCount > 0)
             {
                 me.EmptyCount();
@@ -231,13 +211,60 @@ namespace CleanArchitecture.Application.Hubs
 
         public async Task SetUserOffline(UserDto user)
         {
+            // فقط همین اتصال کم می‌شود؛ اگر کاربر تب یا دستگاه دیگری باز دارد
+            // آنلاین می‌ماند.
+            var (userId, wentOffline) = RemoveConnection(Context.ConnectionId);
 
-            _onlineUsers.Remove(user.id, out var userd);
-          var connectedUser=  await usermanager.GetUserBy(user.id);
-            connectedUser!.UpdatelastLoginDate();
+            if (userId is null || !wentOffline)
+                return;
+
+            await MarkOfflineAsync(userId.Value);
+        }
+
+        /// <summary>
+        /// یک اتصال را از فهرست آنلاین‌ها حذف می‌کند. اگر آخرین اتصال کاربر بود،
+        /// خود کاربر هم حذف می‌شود و wentOffline برابر true است.
+        /// </summary>
+        private static (Guid? UserId, bool WentOffline) RemoveConnection(string connectionId)
+        {
+            lock (_presenceLock)
+            {
+                var entry = _onlineUsers.Values
+                    .FirstOrDefault(u => u.ConnectionIds.Contains(connectionId));
+
+                if (entry is null)
+                    return (null, false);
+
+                // ConcurrentBag حذف یک مورد مشخص را پشتیبانی نمی‌کند، پس بدون
+                // این اتصال از نو ساخته می‌شود.
+                entry.ConnectionIds = new ConcurrentBag<string>(
+                    entry.ConnectionIds.Where(c => c != connectionId));
+
+                if (!entry.ConnectionIds.IsEmpty)
+                    return (entry.id, false);
+
+                _onlineUsers.TryRemove(entry.id, out _);
+                return (entry.id, true);
+            }
+        }
+
+        /// <summary>زمان آخرین بازدید را ذخیره و آفلاین شدن را به بقیه اعلام می‌کند.</summary>
+        private async Task MarkOfflineAsync(Guid userId)
+        {
+            var dbUser = await usermanager.GetUserBy(userId);
+
+            if (dbUser is null)
+            {
+                _loger.LogError("User is Empty!!");
+                return;
+            }
+
+            dbUser.UpdatelastLoginDate();
             await _uow.SaveChangesAsync();
-            await Clients.Others.SetLastSeenUser(new LastSeenModelDto(user.id, connectedUser.LastLoginDate!.Value.DateTime));
-            await Clients.Others.UserIsOffline(user.id);
+
+            await Clients.Others.UserIsOffline(userId);
+            await Clients.Others.SetLastSeenUser(
+                new LastSeenModelDto(userId, dbUser.LastLoginDate!.Value.DateTime));
         }
 
         public async Task TypingReaction(TypingReactionDto reaction)
@@ -271,102 +298,93 @@ namespace CleanArchitecture.Application.Hubs
         }
         public async Task GetMissedMessages(ChatMessageDto Lastmessage)
         {
-            if (Lastmessage != null) {
-                if (Lastmessage.Id == Guid.Empty) {
-                var lastSeenedMessageTimeStamp=await _uow.Messages.AsNoTracking()
-                           .Include(x => x.Conversation.Users.Where(x => x.UserId == Lastmessage.UserId))
-                              .Where(x => x.Conversation.Users.Any(x => x.UserId == Lastmessage.UserId)
-                              &&x.CreatedByUserId!=Lastmessage.UserId&&x.Seen)
-                              .OrderByDescending(x=>x.CreateDate).Select(x=>x.CreateDate).FirstOrDefaultAsync();
-
-                    var missedMessage = await _uow.Messages
-                .Include(x => x.ChatFiles)
-                .Include(x => x.Conversation.Users.Where(x => x.UserId == Lastmessage.UserId))
-                    .Where(x => x.Conversation.Users.Any(x => x.UserId == Lastmessage.UserId)
-                    && x.CreateDate > lastSeenedMessageTimeStamp
-                    )
-                    .Select(x => new ChatMessageDto
-                    {
-                        Id = x.Id,
-                        // پیام‌های ازدست‌رفته هم باید مسیریابی درست داشته باشند،
-                        // وگرنه همان باگ بعد از هر reconnect برمی‌گردد.
-                        ScopeId = x.ConversationId.Value,
-                        ConversationType = x.Conversation.IsPrivate
-                            ? ConversationTyped.Private
-                            : ConversationTyped.group,
-                        UserId = x.CreatedByUserId.Value,
-                        Content = x.Content,
-                        IsMine = false,
-                        IsSeen = x.Seen,
-                        SendAt = x.CreateDate,
-                        ParentId = x.ParentMessageId,
-                        SenderName = "",
-                        Type = (int)x.MessageType,
-                        FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
-                        {
-                            FileId = cf.Id,
-                            FileName = cf.FileName,
-                            FileSize = cf.FileSize.ToString()
-                        }).FirstOrDefault(),
-
-                    }).ToListAsync();
-                    if (missedMessage != null)
-                    {
-                        await Clients.Caller.GetMissedMessages(missedMessage);
-                    }
-                    return;
-                }
-            var message = await _uow.Messages
-                .Include(x => x.Conversation.Users)
-                .Where(x => x.Id == Lastmessage.Id).FirstOrDefaultAsync();
-            if (message == null)
+            // هویت کاربر فقط از توکن احراز هویت خوانده می‌شود، نه از چیزی که
+            // کلاینت می‌فرستد.
+            //
+            // نسخه‌ی قبلی «من» را از روی پیام ورودی حدس می‌زد: هر عضوی از آن
+            // گفتگو که فرستنده نبود. در چت خصوصی تصادفاً درست درمی‌آمد، ولی
+            // وقتی آخرین پیام دریافتی مال یک گروه بود، یک عضو دلخواه گروه به‌جای
+            // کاربر انتخاب می‌شد و پیام‌های گفتگوهای او — از جمله چت‌های
+            // خصوصی‌اش با دیگران — برای این کاربر فرستاده می‌شد. شاخه‌ی دیگر هم
+            // UserId را مستقیم از کلاینت می‌گرفت، یعنی هر کلاینتی می‌توانست با
+            // فرستادن شناسه‌ی دیگری پیام‌های او را بخواند.
+            if (CurrentUserId() is not Guid myId)
                 return;
-            if (message != null)
-            {
-                var users = message.Conversation.Users;
-                var myuser = users.Where(x => x.UserId != Lastmessage.UserId).FirstOrDefault();
-                var otherUser = users.Where(x => x.UserId == Lastmessage.UserId).FirstOrDefault();
-                    if (myuser != null)
-                    {
-                        var missedMessage = await _uow.Messages
-                            .Include(x => x.ChatFiles)
-                            .Include(x => x.Conversation.Users.Where(x => x.UserId == myuser.UserId))
-                                .Where(x => x.Conversation.Users.Any(x => x.UserId == myuser.UserId)
-                                && x.CreateDate > Lastmessage.SendAt
-                                )
-                                .Select(x => new ChatMessageDto
-                                {
-                                    Id = x.Id,
-                                    ScopeId = x.ConversationId.Value,
-                                    ConversationType = x.Conversation.IsPrivate
-                                        ? ConversationTyped.Private
-                                        : ConversationTyped.group,
-                                    UserId = x.CreatedByUserId.Value,
-                                    Content = x.Content,
-                                    IsMine = false,
-                                    IsSeen = x.Seen,
-                                    SendAt = x.CreateDate,
-                                    ParentId = x.ParentMessageId,
-                                    SenderName = "",
-                                    Type = (int)x.MessageType,
-                                    FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
-                                    {
-                                        FileId = cf.Id,
-                                        FileName = cf.FileName,
-                                        FileSize = cf.FileSize.ToString()
-                                    }).FirstOrDefault(),
 
-                                }).ToListAsync();
-                        if (missedMessage != null)
-                        {
-                            await Clients.Caller.GetMissedMessages(missedMessage);
-                        }
-                    }
-                }
+            // نقطه‌ی شروع. از پیام ورودی فقط شناسه‌اش استفاده می‌شود، و فقط اگر
+            // در گفتگویی باشد که این کاربر عضوش است؛ تاریخ هم از دیتابیس
+            // خوانده می‌شود نه از کلاینت.
+            DateTime? since = null;
+
+            if (Lastmessage is not null && Lastmessage.Id != Guid.Empty)
+            {
+                since = await _uow.Messages.AsNoTracking()
+                    .Where(x => x.Id == Lastmessage.Id
+                             && x.Conversation!.Users.Any(u => u.UserId == myId))
+                    .Select(x => (DateTime?)x.CreateDate)
+                    .FirstOrDefaultAsync();
             }
 
+            // اگر نقطه‌ی شروع معتبری نیامد، آخرین پیامی که این کاربر دیده.
+            since ??= await _uow.Messages.AsNoTracking()
+                .Where(x => x.Conversation!.Users.Any(u => u.UserId == myId)
+                         && x.CreatedByUserId != myId
+                         && x.Seen)
+                .OrderByDescending(x => x.CreateDate)
+                .Select(x => (DateTime?)x.CreateDate)
+                .FirstOrDefaultAsync();
 
+            var from = since ?? DateTime.MinValue;
 
+            var missedMessage = await _uow.Messages.AsNoTracking()
+                .Where(x => x.Conversation!.Users.Any(u => u.UserId == myId)
+                         && x.CreatedByUserId != myId
+                         && x.CreateDate > from)
+                // اگر بیش از ۵۰۰ پیام جا مانده، جدیدترین‌ها فرستاده می‌شوند تا
+                // آخرین پیام هر گفتگو در لیست درست باشد.
+                .OrderByDescending(x => x.CreateDate)
+                .Take(500)
+                .Select(x => new ChatMessageDto
+                {
+                    Id = x.Id,
+                    ScopeId = x.ConversationId!.Value,
+                    ConversationType = x.Conversation!.IsPrivate
+                        ? ConversationTyped.Private
+                        : ConversationTyped.group,
+                    UserId = x.CreatedByUserId!.Value,
+                    Content = x.Content,
+                    IsMine = false,
+                    IsSeen = x.Seen,
+                    SendAt = x.CreateDate,
+                    ParentId = x.ParentMessageId,
+                    SenderName = "",
+                    Type = (int)x.MessageType,
+                    ForwardedFromName = x.ForwardedFromName,
+                    FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
+                    {
+                        FileId = cf.Id,
+                        FileName = cf.FileName,
+                        FileSize = cf.FileSize.ToString()
+                    }).FirstOrDefault(),
+                })
+                .ToListAsync();
+
+            if (missedMessage.Count > 0)
+                await Clients.Caller.GetMissedMessages(
+                    missedMessage.OrderBy(x => x.SendAt).ToList());
+        }
+
+        /// <summary>
+        /// شناسه‌ی کاربرِ این اتصال، از توکن احراز هویت. توکن شناسه را در sub
+        /// می‌گذارد و JwtBearer به‌صورت پیش‌فرض آن را به NameIdentifier نگاشت
+        /// می‌کند؛ اگر روزی این نگاشت خاموش شد، sub هم خوانده می‌شود.
+        /// </summary>
+        private Guid? CurrentUserId()
+        {
+            var value = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                     ?? Context.User?.FindFirst("sub")?.Value;
+
+            return Guid.TryParse(value, out var id) ? id : null;
         }
     }
 }
