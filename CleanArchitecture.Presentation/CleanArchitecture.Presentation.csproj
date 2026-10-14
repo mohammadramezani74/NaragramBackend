@@ -49,4 +49,10 @@
     </None>
   </ItemGroup>
 
+  <!-- تنظیمات محلی و مخصوص سرور هیچ‌وقت در خروجی publish نمی‌روند. -->
+  <ItemGroup>
+    <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Production.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>

@@ -103,11 +103,23 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                     var target = JsonSerializer.Deserialize<IntsAuthResult>(await response.Content.ReadAsStringAsync(),
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
+                    // ورود اول هم باید با کد ملی تأیید شود، مثل کاربرهای موجود (شاخه‌ی else).
+                    // قبلاً اینجا فقط شماره کافی بود و هر کس شماره‌ی همکاری را که هنوز حساب
+                    // نداشت می‌دانست، به نام او حساب می‌ساخت.
+                    if (target?.result is null
+                        || string.IsNullOrWhiteSpace(target.result.NationalCode)
+                        || target.result.NationalCode != verifyCode)
+                    {
+                        return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("کاربری با این شماره همراه یافت نشد لطفا با پشتیبانی تماس بگیرید"));
+                    }
+
+
                     var user = User.CreateWithPhoneNumber(target!.result.id,phoneNumber, target!.result.lastName, target!.result.firstName,
                         new Address(target!.result.city,null,null),
                         target.result.chartPost
                  );
-                    var Createdresponse = await _userManager.CreateAsync(user, "Nara@@123914");
+                    // رمز تصادفی: ورود با رمز در ناراگرام استفاده نمی‌شود و رمز مشترک یعنی ورود به حساب همه.
+                    var Createdresponse = await _userManager.CreateAsync(user, "Nr" + Guid.NewGuid().ToString("N") + "!7");
                     if (Createdresponse.Succeeded)
                     {
                         await hub.Clients.All.UserConnected(new UserDto(user.Id, user.LastName + " " + user.FirsName));

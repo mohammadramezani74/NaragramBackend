@@ -18,6 +18,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// تنظیمات مخصوص هر سیستم: رشته‌ی اتصال دیتابیس تستی، شناسه‌ی ادمین و ... .
+// این فایل در گیت نیست (.gitignore) و روی بقیه‌ی تنظیمات می‌نشیند.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddControllers();
 builder.Host.UseSerilog();
 builder.Services.AddHttpContextAccessor();

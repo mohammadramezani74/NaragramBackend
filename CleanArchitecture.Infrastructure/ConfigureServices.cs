@@ -57,6 +57,7 @@ public static class ConfigureServices
         services.AddScoped<IApplicationUserManager, ApplicationUserManager>();
         services.AddScoped<IApplicationRoleManager, ApplicationRoleManager>();
         services.AddScoped<ITokenProvider, TokenProvider>();
+        services.AddScoped<IAdminAccess, AdminAccess>();
         services.AddTransient<ICacheService, CacheService>();
         services.AddScoped<ICsvFileBuilder,CsvFileBuilder>();
         services.AddSingleton<IUploaderService, UploadService>();

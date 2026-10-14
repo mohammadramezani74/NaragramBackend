@@ -35,6 +35,7 @@ namespace CleanArchitecture.Presentation
                 });
 
             services.Configure<ApplicationSettings>(configuration);
+            services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
             services.AddIdentityServices();
             services.AddLogingInternal(configuration);
             services.AddAuthenticationInternal(configuration);

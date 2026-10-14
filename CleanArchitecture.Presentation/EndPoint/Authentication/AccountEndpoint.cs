@@ -14,43 +14,43 @@ public class AccountEndpoint : IEndpoint
     {
         //269183400
         //GoogleAuthCommand
-        app.MapPost("Login", async ([FromServices] ISender Mediatr,
-               [FromBody] ProccessTokenCommand command,
-                CancellationToken cancellationToken) =>
+        // ورود با نام کاربری و رمز فقط در محیط توسعه (برای Swagger محلی).
+        // کاربرهایی که با شماره‌ی همراه ساخته شده‌اند همه یک رمز مشترک قدیمی دارند که در
+        // مخزن عمومی هم هست؛ اگر این دو مسیر روی سرور باز باشند، هر کس شماره‌ی همکاری را
+        // بداند با همان رمز وارد حسابش می‌شود. ورود واقعی ناراگرام فقط
+        // users/register-or-login است (شماره + کد ملی، بررسی‌شده با INTS).
+        var isDevelopment = app.ServiceProvider.GetRequiredService<IHostEnvironment>().IsDevelopment();
+        if (isDevelopment)
         {
-      
-            var result = await Mediatr.Send(command, cancellationToken);
-            return Results.Ok(result);
-        }).AllowAnonymous();
-
-        app.MapPost("googleAuthentication", async ([FromServices] ISender Mediatr,
-         [FromBody] GoogleAuthCommand command,
-          CancellationToken cancellationToken) =>
-        {
-
-            var result = await Mediatr.Send(command, cancellationToken);
-            return Results.Ok(result);
-        }).AllowAnonymous();
-
-
-        app.MapPost("LoginSwagger", async ([FromServices] ISender Mediatr,
-          [FromServices] IHttpContextAccessor Context,
-       [FromQuery] string? UserName, [FromQuery] string? password,
-          CancellationToken cancellationToken) =>
-        {
-           
-            UserName = UserName ?? Context.HttpContext!.Request.Form[nameof(UserName)].ToString();
-            password = password ?? Context.HttpContext!.Request.Form[nameof(password)].ToString();
-
-            var result = await Mediatr.Send(new ProccessTokenCommand(UserName, password), cancellationToken);
-            return Results.Ok(new
+            app.MapPost("Login", async ([FromServices] ISender Mediatr,
+                   [FromBody] ProccessTokenCommand command,
+                    CancellationToken cancellationToken) =>
             {
-                access_token = result.result.token,
-                refresh_token = result.result.refreshtoken,
+      
+                var result = await Mediatr.Send(command, cancellationToken);
+                return Results.Ok(result);
+            }).AllowAnonymous();
 
-            });
-        }).AllowAnonymous();
+            app.MapPost("LoginSwagger", async ([FromServices] ISender Mediatr,
+              [FromServices] IHttpContextAccessor Context,
+           [FromQuery] string? UserName, [FromQuery] string? password,
+              CancellationToken cancellationToken) =>
+            {
+           
+                UserName = UserName ?? Context.HttpContext!.Request.Form[nameof(UserName)].ToString();
+                password = password ?? Context.HttpContext!.Request.Form[nameof(password)].ToString();
 
+                var result = await Mediatr.Send(new ProccessTokenCommand(UserName, password), cancellationToken);
+                return Results.Ok(new
+                {
+                    access_token = result.result.token,
+                    refresh_token = result.result.refreshtoken,
+
+                });
+            }).AllowAnonymous();
+        }
+
+        // ورود با گوگل حذف شد: ناراگرام از آن استفاده نمی‌کند و هر حساب گوگلی را عضو می‌کرد.
 
         app.MapPost("RefreshToken", async ([FromServices] ISender Mediatr,
  [FromBody] CreateRefreshTokenCommand command, CancellationToken cancellationToken) =>

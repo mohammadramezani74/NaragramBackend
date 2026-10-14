@@ -398,3 +398,7 @@ FodyWeavers.xsd
 *.sln.iml
 /CleanArchitecture.Presentation/Serilog
 CleanArchitecture.Presentation/adminsdk.json
+
+# تنظیمات مخصوص سرور (شناسه‌ی ادمین و ...)؛ هرگز در گیت
+**/appsettings.Production.json
+**/appsettings.Local.json
