@@ -30,6 +30,10 @@ namespace CleanArchitecture.Application.Channels.Command.Members.AddMember
             try
             {
                 var userId=_userManager.UserId!.Value;
+
+                // ربات عضو کانال نمی‌شود (سمت سرور هم، نه فقط در فهرست فرانت).
+                if (await _uow.Users.AsNoTracking().AnyAsync(u => u.Id == request.MemberId && u.IsBot, cancellationToken))
+                    return op.Failed("ربات را نمی‌شود به کانال اضافه کرد!");
         
          bool   isExistCurrenUser= await _uow.ChannelMembers.AsNoTracking().AnyAsync(x=>x.ChannelId==request.ChannelId&&x.UserId==request.MemberId);
             if (isExistCurrenUser) {

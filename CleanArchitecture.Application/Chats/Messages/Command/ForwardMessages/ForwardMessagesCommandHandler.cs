@@ -237,6 +237,10 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.ForwardMessages
             if (other is null)
                 return new ResolvedTarget { Error = "کاربر مقصد یافت نشد!" };
 
+            // ربات پیام فورواردی نمی‌گیرد؛ فقط با دکمه‌ها و دستورهای خودش کار می‌کند.
+            if (other.IsBot)
+                return new ResolvedTarget { Error = "به ربات نمی‌شود پیام فوروارد کرد!" };
+
             // جستجو با جفت مرتب‌شده: یک seek روی ایندکس یکتا، به‌جای بررسی
             // زیرمجموعه‌ی کاربران برای هر گفتگو.
             var a = myId.CompareTo(other.Id) <= 0 ? myId : other.Id;

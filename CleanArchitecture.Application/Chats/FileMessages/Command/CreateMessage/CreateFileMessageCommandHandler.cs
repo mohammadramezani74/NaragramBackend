@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Bots;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
 using CleanArchitecture.Application.Common.unitOfWork;
@@ -28,7 +29,8 @@ namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
     internal sealed class CreateFileMessageCommandHandler(IApplicationUserManager userManager,
          IApplicationUnitOfWork uow,
          IHttpContextAccessor httpContext,
-         IHubContext<NaraHub, IChatHubClient> hubContext) : ICommandHandler<CreateFileMessageCommand, CreateFileMessageResponse>
+         IHubContext<NaraHub, IChatHubClient> hubContext,
+         IBotUpdateQueue botQueue) : ICommandHandler<CreateFileMessageCommand, CreateFileMessageResponse>
     {
         private readonly IApplicationUserManager _userManager = userManager;
         private readonly IApplicationUnitOfWork _uow = uow;
@@ -88,6 +90,14 @@ namespace CleanArchitecture.Application.Chats.FileMessages.Command.CreateMessage
             conversation.LastMessageSentAt = message.CreateDate;
 
             var result = await _uow.SaveChangesAsync(cancellationToken);
+
+            // پیام به ربات: به‌جای اعلان، به موتور ربات می‌رود؛ خود ربات جواب می‌دهد.
+            if (await _uow.Users.AsNoTracking().AnyAsync(u => u.Id == anotherUser && u.IsBot, cancellationToken))
+            {
+                botQueue.Enqueue(new BotUpdate(BotUpdateKind.File, anotherUser, MyId, conversation.Id, message.Id));
+                return new CreateFileMessageResponse { FileId = file.Id, MessageType = type, MessageId = message.Id };
+            }
+
             var hostName = _httpContext.HttpContext.Request.Host.Value;
             var scheme = _httpContext.HttpContext.Request.Scheme;
 

@@ -7,6 +7,7 @@ using CleanArchitecture.Application.Abstraction.Purge;
 using CleanArchitecture.Application.Abstraction.Sms;
 using CleanArchitecture.Application.Abstraction.Storage;
 using CleanArchitecture.Application.Abstraction.Uploader;
+using CleanArchitecture.Application.Bots;
 using CleanArchitecture.Infrastructure.Authentication;
 using CleanArchitecture.Infrastructure.BackgroundJob;
 using CleanArchitecture.Infrastructure.Caching;
@@ -58,6 +59,10 @@ public static class ConfigureServices
         services.AddScoped<IApplicationRoleManager, ApplicationRoleManager>();
         services.AddScoped<ITokenProvider, TokenProvider>();
         services.AddScoped<IAdminAccess, AdminAccess>();
+
+        // موتور ربات در پس‌زمینه؛ اتصال‌ها/جریان‌هایی که در این اسمبلی نوشته شوند هم پیدا می‌شوند.
+        services.AddHostedService<BotDispatcherService>();
+        services.AddBotParts(typeof(ConfigureServices).Assembly);
         services.AddTransient<ICacheService, CacheService>();
         services.AddScoped<ICsvFileBuilder,CsvFileBuilder>();
         services.AddSingleton<IUploaderService, UploadService>();

@@ -37,6 +37,27 @@ namespace CleanArchitecture.Domain.Entities.Chat
         /// </summary>
         public string? ForwardedFromName { get; internal set; }
 
+        /// <summary>
+        /// فقط برای پیام‌های ربات: دکمه‌های شیشه‌ای زیر پیام، کارت خلاصه و یادداشت
+        /// پایین پیام، به صورت JSON (BotReplyMarkup در لایه‌ی Application).
+        /// برای پیام‌های عادی null است.
+        /// </summary>
+        public string? ReplyMarkup { get; private set; }
+
+        public void SetReplyMarkup(string? replyMarkup) => ReplyMarkup = replyMarkup;
+
+        /// <summary>
+        /// ربات پیام خودش را عوض می‌کند (مثلاً منو به زیرمنو می‌رود).
+        /// markEdited = false یعنی برچسب «ویرایش‌شده» نخورد؛ برای جابه‌جایی در منو.
+        /// </summary>
+        public void EditByBot(string content, string? replyMarkup, bool markEdited)
+        {
+            Content = content;
+            ReplyMarkup = replyMarkup;
+            if (markEdited)
+                ModifiedDate = DateTime.Now;
+        }
+
         public bool IsPinned { get; private set; }
         public DateTime? PinnedAt { get; private set; }
         public Guid? PinnedByUserId { get; private set; }

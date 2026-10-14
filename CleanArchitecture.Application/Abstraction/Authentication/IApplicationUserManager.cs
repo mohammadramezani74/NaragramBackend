@@ -19,6 +19,9 @@ namespace CleanArchitecture.Application.Abstraction.Authentication
         Task<User?> GetUserBy(Guid  Id);
         bool ExistUserBy(Guid Id);
         Task<OperationResult> CreateUserAsync(CreateUserCommand createUser,CancellationToken cancellationToken=default(CancellationToken));
+
+        /// <summary>کاربرِ یک ربات تازه: بدون رمز و شماره، پس نمی‌تواند وارد برنامه شود.</summary>
+        Task<OperationResult<Guid>> CreateBotUserAsync(string userName, string displayName, CancellationToken cancellationToken = default);
         Task<OperationResult<TokenResponse>> CreateOrLoginUserAsync(string  phoneNumber,string verifycode, CancellationToken cancellationToken = default);
         Task<OperationResult> SendValidateCode(string phoneNumber);
         Task<List<GetUserResponse>> GetUsers(GetUserQuery getUser,CancellationToken cancellationToken = default(CancellationToken));

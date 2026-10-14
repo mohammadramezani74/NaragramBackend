@@ -6,6 +6,8 @@ using MediatR;
 using Mapster;
 using MapsterMapper;
 using CleanArchitecture.Application.Chats.Hubs.Services;
+using CleanArchitecture.Application.Bots;
+using CleanArchitecture.Application.Bots.Engine;
 
 
 namespace CleanArchitecture.Application
@@ -27,6 +29,12 @@ namespace CleanArchitecture.Application
           services.AddSingleton(config);
             services.AddScoped<IMapper,ServiceMapper>();
             services.AddSingleton<UserOnlineService>();
+
+            // ربات‌ها: صف، موتور، و جریان‌ها/اتصال‌های این اسمبلی (خودکار پیدا می‌شوند).
+            services.AddSingleton<IBotUpdateQueue>(new BotUpdateQueue(partitions: 4));
+            services.AddScoped<BotMessenger>();
+            services.AddScoped<IBotEngine, BotEngine>();
+            services.AddBotParts(Assembly.GetExecutingAssembly());
 
             return services;
         }

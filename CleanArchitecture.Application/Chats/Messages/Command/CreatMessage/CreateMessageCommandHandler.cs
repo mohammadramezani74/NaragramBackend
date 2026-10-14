@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction;
+﻿using CleanArchitecture.Application.Bots;
+using CleanArchitecture.Application.Abstraction;
 using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Common.Messaging;
 using CleanArchitecture.Application.Common.Models;
@@ -26,7 +27,8 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
          IApplicationUnitOfWork uow, 
          INotificationService notifService,
          IHttpContextAccessor httpContext,
-         IHubContext<NaraHub,IChatHubClient> hubContext)
+         IHubContext<NaraHub,IChatHubClient> hubContext,
+         IBotUpdateQueue botQueue)
         : ICommandHandler<CreateMessageCommand,Guid>
     {
         private readonly IApplicationUserManager _userManager = userManager;
@@ -69,6 +71,14 @@ namespace CleanArchitecture.Application.Chats.Messages.Command.CreatMessage
             var otheruser= conversation.Users.Where(x=>x.UserId!=MyId).First();
             otheruser.IncreaseCount();
             var result=  await _uow.SaveChangesAsync(cancellationToken);
+
+            // پیام به ربات: به‌جای اعلان، به موتور ربات می‌رود؛ خود ربات جواب می‌دهد.
+            if (await _uow.Users.AsNoTracking().AnyAsync(u => u.Id == anotherUser && u.IsBot, cancellationToken))
+            {
+                botQueue.Enqueue(new BotUpdate(BotUpdateKind.Text, anotherUser, MyId, conversation.Id, message.Id, request.Message));
+                return message.Id;
+            }
+
             var hostName = _httpContext.HttpContext.Request.Host.Value;
             var scheme = _httpContext.HttpContext.Request.Scheme;
           

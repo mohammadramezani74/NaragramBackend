@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Domain.Entities.ChannelsAgg;
+﻿using CleanArchitecture.Domain.Entities.Bots;
+using CleanArchitecture.Domain.Entities.ChannelsAgg;
 using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Entities.ToDoItems;
@@ -29,5 +30,8 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<ChannelAvatar> ChannelAvatars => _context.Set<ChannelAvatar>();
         public DbSet<ConversationAvatar> ConversationAvatar => _context.Set<ConversationAvatar>();
         public DbSet<ContactTask> ContactTasks => _context.Set<ContactTask>();
+        public DbSet<Bot> Bots => _context.Set<Bot>();
+        public DbSet<BotMenuNode> BotMenuNodes => _context.Set<BotMenuNode>();
+        public DbSet<BotSession> BotSessions => _context.Set<BotSession>();
     }
 }

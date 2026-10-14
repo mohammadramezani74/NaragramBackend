@@ -7,13 +7,15 @@ using CleanArchitecture.Domain.Entities.Identity;
 using MapsterMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 
 
 namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivateConversation
 {
     internal sealed class CreateConversationCommandHandler(IApplicationUserManager userManager,
-        IApplicationUnitOfWork uow,IMapper mapper,IHttpContextAccessor httpContext) : ICommandHandler<CreateConversationCommand, ConverSationResponse>
+        IApplicationUnitOfWork uow,IMapper mapper,IHttpContextAccessor httpContext,
+        ILogger<CreateConversationCommandHandler> logger) : ICommandHandler<CreateConversationCommand, ConverSationResponse>
     {
         private readonly IApplicationUserManager _userManager = userManager;
         private readonly IApplicationUnitOfWork _uow = uow;
@@ -66,6 +68,7 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivat
 
                     return result;
                 }
+                logger.LogWarning("CreateConversation save failed ({Me} -> {Other}): {Error}", me.Id, other.Id, res.Message);
             }
             catch (DbUpdateException)
             {
@@ -90,9 +93,9 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreatePrivat
             }
             return OperationResult.Failure<ConverSationResponse>(new OperationResult().Failed("عملیات با خطا مواجه شد!"));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                logger.LogError(ex, "CreateConversation failed for {ToUserId}", request?.ToUserId);
                 return OperationResult.Failure<ConverSationResponse>(new OperationResult().Failed("عملیات با خطا مواجه شد!"));
             }
         }

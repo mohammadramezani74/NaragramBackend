@@ -360,6 +360,7 @@ namespace CleanArchitecture.Application.Hubs
                     SenderName = "",
                     Type = (int)x.MessageType,
                     ForwardedFromName = x.ForwardedFromName,
+                    ReplyMarkup = x.ReplyMarkup,
                     FileContent = x.ChatFiles.Select(cf => new ChatFilesDto
                     {
                         FileId = cf.Id,

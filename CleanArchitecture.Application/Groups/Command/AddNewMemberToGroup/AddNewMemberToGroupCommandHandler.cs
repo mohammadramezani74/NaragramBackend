@@ -18,6 +18,9 @@ namespace CleanArchitecture.Application.Groups.Command.AddNewMemberToGroup
                 .FirstOrDefaultAsync();
             if (group == null)
                 return new OperationResult().Failed("گروهی یافت نشد!");
+            // ربات عضو گروه نمی‌شود (سمت سرور هم، نه فقط در فهرست فرانت).
+            if (await _uow.Users.AsNoTracking().AnyAsync(u => u.Id == request.NewUserId && u.IsBot, cancellationToken))
+                return new OperationResult().Failed("ربات را نمی‌شود به گروه اضافه کرد!");
             var isExist=group.Users.Any(x=>x.UserId== request.NewUserId);
             if (isExist)
                 return new OperationResult().Failed("این کاربر از قبل در این گروه قرار دارد!");

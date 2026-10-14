@@ -47,5 +47,14 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
 
         /// <summary>زمان یادآوری یکی از کارهای کاربر رسید.</summary>
         Task TaskReminder(CleanArchitecture.Application.ContactTasks.TaskReminderDto reminder);
+
+        /// <summary>
+        /// ربات یکی از پیام‌های خودش را عوض کرد (متن یا دکمه‌ها؛ مثلاً رفتن به زیرمنو).
+        /// جدا از EditedMessageReceived است تا کلاینت‌های قدیمی که دکمه نمی‌شناسند نشکنند.
+        /// </summary>
+        Task BotMessageUpdated(ChatMessageDto message);
+
+        /// <summary>کیبورد ربات یا وضعیت «شروع» برای این کاربر عوض شد.</summary>
+        Task BotStateChanged(BotStateDto state);
     }
 }

@@ -46,7 +46,7 @@ namespace CleanArchitecture.Application.Channels.Command.CreateChannel
                 Channel channel = Channel.CreatePublicChannel(request.Title, request.UserName, request.Description, userId);
                 if (request.IsPublic)
                 {
-                     allUserIds = await _uow.Users.Where(x => x.Id != userId).Select(x => x.Id).ToListAsync(cancellationToken);
+                     allUserIds = await _uow.Users.Where(x => x.Id != userId && !x.IsBot).Select(x => x.Id).ToListAsync(cancellationToken);
                     var members = ChannelMember.JoinAllMembers(channel.Id, allUserIds);
                     _uow.ChannelMembers.AddRange(members);
                 }

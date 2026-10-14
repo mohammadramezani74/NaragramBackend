@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Domain.Entities.ChannelsAgg;
+﻿using CleanArchitecture.Domain.Entities.Bots;
+using CleanArchitecture.Domain.Entities.ChannelsAgg;
 using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.Entities.Identity;
 using CleanArchitecture.Domain.Entities.ToDoItems;
@@ -38,6 +39,9 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<ConversationUser> ConversationUser { get; }
         public DbSet<ConversationAvatar> ConversationAvatar { get; }
         public DbSet<ContactTask> ContactTasks { get; }
+        public DbSet<Bot> Bots { get; }
+        public DbSet<BotMenuNode> BotMenuNodes { get; }
+        public DbSet<BotSession> BotSessions { get; }
 
     }
 }

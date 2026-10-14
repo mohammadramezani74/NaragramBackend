@@ -30,6 +30,8 @@ namespace CleanArchitecture.Application.Users.Queries.GetUser
         public bool OtherUserBlocked { get; set; }
         public bool IsChannel { get; set; }
         public bool IsGroup { get; set; }
+        /// <summary>این ردیف یک ربات است (بخش «ربات‌ها» در مخاطبین).</summary>
+        public bool IsBot { get; set; }
         public ChannelDto? channel { get; set; } = null;
         public DateTime? LastMessageDate { get; set; }
 

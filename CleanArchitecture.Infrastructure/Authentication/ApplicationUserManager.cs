@@ -1,4 +1,5 @@
-﻿using CleanArchitecture.Application.Abstraction.Authentication;
+﻿using CleanArchitecture.Application.Bots;
+using CleanArchitecture.Application.Abstraction.Authentication;
 using CleanArchitecture.Application.Abstraction.Caching;
 using CleanArchitecture.Application.Abstraction.Sms;
 using CleanArchitecture.Application.Authentication.Command.ProcessToken;
@@ -40,7 +41,8 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
     ITokenProvider tokenProvider,
     ICacheService cacheService,
     ISmsService smsService,
-    IHubContext<NaraHub, IChatHubClient> hub) : IApplicationUserManager
+    IHubContext<NaraHub, IChatHubClient> hub,
+    IAdminAccess adminAccess) : IApplicationUserManager
 {
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly ITokenProvider _tokenProvider = tokenProvider;
@@ -76,6 +78,16 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         }
         return new OperationResult().Failed("عملیات با خطا مواجه شد");
     }
+    public async Task<OperationResult<Guid>> CreateBotUserAsync(string userName, string displayName, CancellationToken cancellationToken = default)
+    {
+        var user = User.CreateBot(userName, displayName);
+        var result = await _userManager.CreateAsync(user);
+        if (!result.Succeeded)
+            return OperationResult.Failure<Guid>(new OperationResult().BadRequest(string.Join(" ", result.Errors.Select(e => e.Description))));
+
+        return OperationResult.Success(user.Id);
+    }
+
     public async Task<OperationResult<TokenResponse>> CreateOrLoginUserAsync(string phoneNumber,string verifyCode, CancellationToken cancellationToken = default)
     {
        var Savedcode= _cacheService.Get<int>(phoneNumber);
@@ -280,6 +292,11 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
 
             var response = new List<GetUserResponse>();
 
+            // ربات‌ها فقط برای کسانی که اجازه دارند (و همه‌شان برای ادمین) در فهرست می‌آیند.
+            var visibleBots = userId is Guid me
+                ? (await BotVisibility.VisibleBotUserIdsAsync(_unitOfWork, _roleManager, me, adminAccess.IsAdmin(me), cancellationToken)).ToList()
+                : new List<Guid>();
+
             var conversationsOfUser = await _unitOfWork.Conversation.Where(x=>x.IsPrivate).AsNoTracking()
                          .AsSplitQuery()
                 .Include(x => x.Users)
@@ -294,7 +311,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 var OtherUser = conversation.Users.Where(u => u.UserId != userId).Select(u => u.User).FirstOrDefault();
                 var CurrentUser = conversation.Users.Where(u => u.UserId == userId).FirstOrDefault();
                 var OtherconversationUser = conversation.Users.Where(u => u.UserId != userId).FirstOrDefault();
-                if (OtherUser != null)
+                if (OtherUser != null && (!OtherUser.IsBot || visibleBots.Contains(OtherUser.Id)))
                 {
                     var newuser = new GetUserResponse
 
@@ -314,7 +331,8 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                         LastMessageDate = conversation.LastMessageSentAt,
                         IsPin = CurrentUser.IsPinned,
                         IsBlocked = CurrentUser.IsBlocked,
-                        OtherUserBlocked = OtherconversationUser.IsBlocked
+                        OtherUserBlocked = OtherconversationUser.IsBlocked,
+                        IsBot = OtherUser.IsBot
                     };
                     response.Add(newuser);
                 }
@@ -327,7 +345,8 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                       .AsSplitQuery()
                 //.Include(x => x.UserAvatars)
             .Where(u => !userIdsWithConversation.Contains(u.Id)
-            && u.Id != userId)
+            && u.Id != userId
+            && (!u.IsBot || visibleBots.Contains(u.Id)))
             .Select(x => new GetUserResponse
             {
                 Id = x.Id,
@@ -336,6 +355,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 FirstName = x.FirsName!,
                 LastName = x.LastName!,
                 UserName = x.UserName!,
+                IsBot = x.IsBot,
 
                 Avatar = SetAvatar(x,false)
             })

@@ -21,7 +21,7 @@ namespace CleanArchitecture.Application.Users.Queries.UserList
         public async Task<OperationResult<IReadOnlyList<GetUsersListResponse>>> Handle(GetUsersListQuery request, CancellationToken cancellationToken)
         {
             var myId = _userManager.UserId!.Value;
-            var users=  _uow.Users.AsNoTracking().Where(x=>x.Id != myId);
+            var users=  _uow.Users.AsNoTracking().Where(x=>x.Id != myId && !x.IsBot); // انتخاب عضو گروه/کانال: بدون ربات
             if(!string.IsNullOrEmpty(request.Search))
             {
                 users=users.Where(x=>x.FirsName.Contains(request.Search)||

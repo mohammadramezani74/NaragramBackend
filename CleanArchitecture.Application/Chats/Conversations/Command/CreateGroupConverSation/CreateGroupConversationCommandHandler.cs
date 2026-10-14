@@ -23,7 +23,7 @@ namespace CleanArchitecture.Application.Chats.Conversations.Command.CreateGroupC
             var AllExists = request.Others.All( u =>  _userManager.ExistUserBy(u));
             var me = await _userManager.GetUserBy(_userManager.UserId!.Value);
      
-            var others=await _uow.Users.Where(x=>request.Others.Contains(x.Id)).ToListAsync();
+            var others=await _uow.Users.Where(x=>request.Others.Contains(x.Id) && !x.IsBot).ToListAsync(); // ربات عضو گروه نمی‌شود
             var group = Domain.Entities.Chat.Conversation.Create(me!, others,request.Title,request.Description,request.UserName);
         
             _uow.Conversation.Add(group);

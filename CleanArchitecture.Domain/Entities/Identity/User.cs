@@ -24,6 +24,12 @@ namespace CleanArchitecture.Domain.Entities.Identity
         public Gender Gender { get; private set; }
         public bool IsActive { get; private set; }
         public bool IsDoNotDisturb { get; private set; }
+
+        /// <summary>
+        /// کاربرِ ربات. ربات شماره و رمز ندارد و نمی‌تواند وارد برنامه شود؛ فقط
+        /// موتور ربات از طرف او پیام می‌فرستد. تنظیماتش در جدول Bots است.
+        /// </summary>
+        public bool IsBot { get; private set; }
         public DateTimeOffset? LastLoginDate { get; private set; }
         public virtual ICollection<RefreshToken> RefreshTokens { get; internal set; } = new List<RefreshToken>();
         public virtual ICollection<UserAvatar> UserAvatars { get; internal set; } = new List<UserAvatar>();
@@ -93,6 +99,22 @@ namespace CleanArchitecture.Domain.Entities.Identity
        bio
 
     );
+        public static User CreateBot(string userName, string displayName)
+        {
+            var user = new User(userName, 0, null, string.Empty, displayName.Trim(), Gender.Unknown, null, null);
+            user.IsBot = true;
+            user.TwoFactorEnabled = false;
+            user.PhoneNumberConfirmed = false;
+            user.EmailConfirmed = false;
+            return user;
+        }
+
+        public void SetBotName(string displayName)
+        {
+            FirsName = displayName.Trim();
+            LastName = string.Empty;
+        }
+
         public void SetDoNotDisturb(bool isDoNotDisturb)
         {
             IsDoNotDisturb = isDoNotDisturb;

@@ -37,6 +37,9 @@ namespace CleanArchitecture.Application.Hubs.Models
         public string? ForwardedFromName { get; set; }
 
         public ConversationTyped ConversationType { get; set; }
+
+        /// <summary>فقط برای پیام ربات: دکمه‌ها، کارت و یادداشت زیر پیام (JSON).</summary>
+        public string? ReplyMarkup { get; set; }
     }
     
 }

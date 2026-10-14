@@ -33,6 +33,7 @@ namespace CleanArchitecture.Application.Chats.Messages
     ? m.ParentMessage.CreatedByUser.FirsName + " " + m.ParentMessage.CreatedByUser.LastName
     : null,
                 ForwardedFromName = m.ForwardedFromName,
+                ReplyMarkup = m.ReplyMarkup,
                 ConversationType = ConversationTyped.Private,
                 FileContent = m.ChatFiles.Select(cf => new ChatFilesDto
                 {

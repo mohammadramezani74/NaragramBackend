@@ -35,6 +35,9 @@ namespace CleanArchitecture.Application.Chats.Messages
 
         public ConversationTyped ConversationType { get; set; }
 
+        /// <summary>فقط برای پیام ربات: دکمه‌ها، کارت و یادداشت زیر پیام (JSON).</summary>
+        public string? ReplyMarkup { get; set; }
+
         public void Register(TypeAdapterConfig config)
         {
             config.NewConfig<Conversation, MessageResponse>();
