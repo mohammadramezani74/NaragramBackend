@@ -18,6 +18,7 @@ namespace CleanArchitecture.Application.Channels.Rules
             IApplicationUnitOfWork uow, Guid channelId, Guid userId, CancellationToken ct = default)
             => uow.Channels.AsNoTracking().AnyAsync(
                 c => c.Id == channelId
+                     && c.ArchivedAt == null // کانال بایگانی‌شده فقط‌خواندنی است
                      && (c.CreatedByUserId == userId || c.Admins.Any(a => a.UserId == userId)),
                 ct);
     }

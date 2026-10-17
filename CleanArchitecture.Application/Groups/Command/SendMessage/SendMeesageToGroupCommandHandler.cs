@@ -47,6 +47,8 @@ namespace CleanArchitecture.Application.Groups.Command.SendMessage
                 .Include(x => x.Users)
                                                                .SingleOrDefaultAsync
                                                                (x => x.Id == request.ConversationId, cancellationToken);
+            if (conversation?.ArchivedAt != null)
+                return OperationResult.Failure<Guid>(op.Failed("این گروه بایگانی شده و پیام تازه نمی‌پذیرد."));
             var myUser=conversation.Users.Where(x=>x.UserId == MyId).FirstOrDefault();
             if (myUser.IsMuted) {
                 return OperationResult.Failure<Guid>(op.Failed("یوزر شما توسط ادمین سکوت خورده و امکان ارسال پیام وجود ندارد!"));

@@ -29,11 +29,18 @@ namespace CleanArchitecture.Application
           services.AddSingleton(config);
             services.AddScoped<IMapper,ServiceMapper>();
             services.AddSingleton<UserOnlineService>();
+            services.AddSingleton<CleanArchitecture.Application.Hubs.HubConnectionRegistry>();
+            services.AddSingleton<CleanArchitecture.Application.Hubs.HubRoomMembership>();
 
             // ربات‌ها: صف، موتور، و جریان‌ها/اتصال‌های این اسمبلی (خودکار پیدا می‌شوند).
             services.AddSingleton<IBotUpdateQueue>(new BotUpdateQueue(partitions: 4));
             services.AddScoped<BotMessenger>();
+            services.AddSingleton<CleanArchitecture.Application.Bots.Api.BotApiRateLimiter>();
+            services.AddScoped<CleanArchitecture.Application.Bots.Api.IBotApiService, CleanArchitecture.Application.Bots.Api.BotApiService>();
             services.AddScoped<IBotEngine, BotEngine>();
+            services.AddScoped<CleanArchitecture.Application.AdminPanel.IBroadcastSender, CleanArchitecture.Application.AdminPanel.BroadcastSender>();
+            services.AddScoped<CleanArchitecture.Application.AdminPanel.IAppSettingsStore, CleanArchitecture.Application.AdminPanel.AppSettingsStore>();
+            services.AddScoped<CleanArchitecture.Application.AdminPanel.ICreationPolicy, CleanArchitecture.Application.AdminPanel.CreationPolicy>();
             services.AddBotParts(Assembly.GetExecutingAssembly());
 
             return services;

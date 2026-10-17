@@ -19,7 +19,9 @@ namespace CleanArchitecture.Application.Channels.Command.CreateChannel
 {
     public sealed class CreateChannelCommandHandler(IApplicationUnitOfWork unitOfWork,
         IApplicationUserManager userManager,
-            IHubContext<NaraHub, IChatHubClient> hubContext) : ICommandHandler<CreateChannelCommand>
+            IHubContext<NaraHub, IChatHubClient> hubContext,
+            CleanArchitecture.Application.AdminPanel.ICreationPolicy creationPolicy,
+            HubRoomMembership rooms) : ICommandHandler<CreateChannelCommand>
     {
         private readonly IApplicationUnitOfWork _uow = unitOfWork;
         private readonly IApplicationUserManager _userManager = userManager;
@@ -31,6 +33,8 @@ namespace CleanArchitecture.Application.Channels.Command.CreateChannel
             try
             {
                 var userId = _userManager.UserId!.Value;
+                if (!await creationPolicy.CanCreateAsync(userId, "channel", cancellationToken))
+                    return op.Failed("ساخت کانال برای شما فعال نیست. با مدیر سیستم هماهنگ کنید.");
                 var claims = await _userManager.GetUserClaims(userId);
                 List<Guid>? allUserIds = new List<Guid>();
 
@@ -56,6 +60,10 @@ namespace CleanArchitecture.Application.Channels.Command.CreateChannel
           
 
               var result=  await _uow.SaveChangesAsync(cancellationToken);
+                if (result.IsFailure)
+                    return op.Failed("عملیات با خطا مواجه شد!");
+                // سازنده (و برای کانال عمومی همه) بدون وصل شدن دوباره پست‌های زنده را بگیرند.
+                await rooms.AddAsync(channel.Id, allUserIds.Append(userId));
                 if (request.IsPublic) {
                     var newchannel = new GetUserResponse
                     {

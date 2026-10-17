@@ -42,7 +42,7 @@ internal sealed class TokenProvider(IConfiguration configuration,
         var user = _userManager.Users.Include(m => m.RefreshTokens).SingleOrDefault(u => u.RefreshTokens.Any(t => t.HashedToken == token));
 
 
-        if (user == null) return null;
+        if (user == null || user.IsDisabled) return null;
 
         var refreshToken = user.RefreshTokens.Single(x => x.HashedToken == token);
 

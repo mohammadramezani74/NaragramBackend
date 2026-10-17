@@ -6,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CleanArchitecture.Application.Groups.Command.AddNewMemberToGroup
 {
-    public class AddNewMemberToGroupCommandHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager) : ICommandHandler<AddNewMemberToGroupCommand>
+    public class AddNewMemberToGroupCommandHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager,
+        CleanArchitecture.Application.Hubs.HubRoomMembership rooms) : ICommandHandler<AddNewMemberToGroupCommand>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _userManager = userManager;
@@ -40,13 +41,17 @@ namespace CleanArchitecture.Application.Groups.Command.AddNewMemberToGroup
 
           
             _uow.ConversationUser.Add(newUser);
-            await _uow.SaveChangesAsync();
+            var saved = await _uow.SaveChangesAsync();
+            if (saved.IsFailure)
+                return new OperationResult().Failed("افزودن عضو انجام نشد.");
             }
             catch (Exception ex)
             {
 
                 throw;
             }
+            // عضو تازه همین حالا پیام‌های زنده‌ی گروه را بگیرد، نه از اتصال بعدی.
+            await rooms.AddAsync(group.Id, new[] { request.NewUserId });
             return new OperationResult().succedded();
         }
     }

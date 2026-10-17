@@ -155,6 +155,9 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
         }
         else
         {
+            if (existedUser.IsDisabled)
+                return OperationResult.Failure<TokenResponse>(new OperationResult().Failed("حساب شما غیرفعال شده است. لطفا با پشتیبانی تماس بگیرید."));
+
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://api.irannara.com/api/v1/Telegram/AuthForChat");
             request.Headers.Add("accept", "*/*");
@@ -311,7 +314,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 var OtherUser = conversation.Users.Where(u => u.UserId != userId).Select(u => u.User).FirstOrDefault();
                 var CurrentUser = conversation.Users.Where(u => u.UserId == userId).FirstOrDefault();
                 var OtherconversationUser = conversation.Users.Where(u => u.UserId != userId).FirstOrDefault();
-                if (OtherUser != null && (!OtherUser.IsBot || visibleBots.Contains(OtherUser.Id)))
+                if (OtherUser != null && !OtherUser.IsDisabled && (!OtherUser.IsBot || visibleBots.Contains(OtherUser.Id)))
                 {
                     var newuser = new GetUserResponse
 
@@ -346,6 +349,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 //.Include(x => x.UserAvatars)
             .Where(u => !userIdsWithConversation.Contains(u.Id)
             && u.Id != userId
+            && !u.IsDisabled
             && (!u.IsBot || visibleBots.Contains(u.Id)))
             .Select(x => new GetUserResponse
             {
@@ -367,7 +371,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                 //.Include(x => x.ChannelAvatars)
                 .Include(x => x.Admins).ThenInclude(x => x.User)
 
-            .Where(x => x.Members.Any(x => x.UserId == userId))
+            .Where(x => x.ArchivedAt == null && x.Members.Any(x => x.UserId == userId))
           .ToListAsync(cancellationToken);
             var channels = channelsquery
         .Select(x => new GetUserResponse
@@ -400,7 +404,7 @@ internal class ApplicationUserManager(IHttpContextAccessor httpContextAccessor,
                .Include(x => x.CreatedByUser)
                .Include(x => x.Users)
                    .ThenInclude(x => x.User)
-               .Where(x => x.IsPrivate == false && x.Users.Any(u => u.UserId == userId))
+               .Where(x => x.IsPrivate == false && x.ArchivedAt == null && x.Users.Any(u => u.UserId == userId))
                .AsSplitQuery()
                .ToListAsync();
 

@@ -56,5 +56,8 @@ namespace CleanArchitecture.Application.Hubs.Abstractions
 
         /// <summary>کیبورد ربات یا وضعیت «شروع» برای این کاربر عوض شد.</summary>
         Task BotStateChanged(BotStateDto state);
+
+        /// <summary>حساب غیرفعال شد یا از همه‌ی دستگاه‌ها خارج شد؛ برنامه باید خارج شود. پیام برای نمایش است.</summary>
+        Task ForceLogout(string message);
     }
 }

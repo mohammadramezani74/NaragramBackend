@@ -18,7 +18,8 @@ using System.Threading.Channels;
 
 namespace CleanArchitecture.Application.Channels.Command.Members.AddMember
 {
-    public class AddNewMemberCommandHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager, IHubContext<NaraHub, IChatHubClient> hubContext) : ICommandHandler<AddNewMemberCommand>
+    public class AddNewMemberCommandHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager, IHubContext<NaraHub, IChatHubClient> hubContext,
+        HubRoomMembership rooms) : ICommandHandler<AddNewMemberCommand>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _userManager = userManager;
@@ -37,11 +38,14 @@ namespace CleanArchitecture.Application.Channels.Command.Members.AddMember
         
          bool   isExistCurrenUser= await _uow.ChannelMembers.AsNoTracking().AnyAsync(x=>x.ChannelId==request.ChannelId&&x.UserId==request.MemberId);
             if (isExistCurrenUser) {
-                op.Failed("این کاربر از قبل در این کانال وجود دارد!");
+                return op.Failed("این کاربر از قبل در این کانال وجود دارد!");
             }
             var newmember = ChannelMember.Build(request.ChannelId, request.MemberId,userId);
             _uow.ChannelMembers.Add(newmember);
-            await _uow.SaveChangesAsync();
+            var saved = await _uow.SaveChangesAsync();
+            if (saved.IsFailure)
+                return op.Failed("افزودن عضو انجام نشد.");
+            await rooms.AddAsync(request.ChannelId, new[] { request.MemberId });
                 var channel = await _uow.Channels.Where(x => x.Id == request.ChannelId).FirstOrDefaultAsync();
                 if (channel != null)
                 {

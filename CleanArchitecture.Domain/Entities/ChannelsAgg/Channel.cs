@@ -29,6 +29,13 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
         public Guid? LastUserSenderMessageId { get; set; }
         public DateTime? LastMessageSentAt { get; set; }
 
+        /// <summary>بایگانی‌شده توسط ادمین: از لیست‌ها پنهان و فقط‌خواندنی؛ قابل برگشت.</summary>
+        public DateTime? ArchivedAt { get; private set; }
+
+        public void Archive() => ArchivedAt ??= DateTime.Now;
+
+        public void Restore() => ArchivedAt = null;
+
         public static Channel CreatePublicChannel(string title,
     string userName,
     string description,
@@ -115,6 +122,14 @@ namespace CleanArchitecture.Domain.Entities.ChannelsAgg
             EnsureAdmin(byUserId);
             GuardTitle(title);
             Title = title;
+        }
+
+        /// <summary>ویرایش از پنل ادمین سامانه (ادمین کانال بودن لازم نیست).</summary>
+        public void EditByAdmin(string title, string? description)
+        {
+            GuardTitle(title);
+            Title = title;
+            Description = description ?? string.Empty;
         }
 
         public void ChangeDescription(string description, Guid byUserId)

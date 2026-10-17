@@ -16,7 +16,8 @@ using System.Security.Claims;
 namespace CleanArchitecture.Application.Hubs
 {
     public class NaraHub(IApplicationUserManager usermanager, IApplicationUnitOfWork uow
-        ,ILogger<NaraHub> looger,IHttpContextAccessor httpContextAccessor) : Hub<IChatHubClient>, IChatHubServer
+        ,ILogger<NaraHub> looger,IHttpContextAccessor httpContextAccessor,
+        HubConnectionRegistry connections) : Hub<IChatHubClient>, IChatHubServer
     {
         private static readonly ConcurrentDictionary<Guid, UserDto> _onlineUsers = new ConcurrentDictionary<Guid, UserDto>();
         private static readonly object _presenceLock = new();
@@ -27,6 +28,10 @@ namespace CleanArchitecture.Application.Hubs
 
         public override async Task OnConnectedAsync()
         {
+            // برای بستن فوری اتصال وقتی حساب غیرفعال یا از همه‌ی دستگاه‌ها خارج می‌شود.
+            if (Guid.TryParse(Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var connectedUserId))
+                connections.Add(connectedUserId, Context);
+
 #if DEBUG
             var token = Context.GetHttpContext().Request.Query.FirstOrDefault(x =>
             x.Key == "access_token");
@@ -64,7 +69,7 @@ namespace CleanArchitecture.Application.Hubs
 
         // 🚩 توکن از querystring دقیقا مثل چیزی که فرانت می‌فرسته
         var rawToken = httpContext.Request.Query["access_token"].ToString();
-        _loger.LogWarning("token (query access_token) is {token}", rawToken);
+        // توکن هرگز لاگ نشود: ۷ روز اعتبار دارد و لاگ‌ها در دیتابیس Serilog می‌ماند.
 
         if (string.IsNullOrWhiteSpace(rawToken))
         {
@@ -113,6 +118,7 @@ namespace CleanArchitecture.Application.Hubs
         }
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
+            connections.Remove(Context.ConnectionId);
             try
             {
                 // کاربر فقط وقتی آفلاین حساب می‌شود که آخرین اتصالش قطع شود.

@@ -30,7 +30,7 @@ namespace CleanArchitecture.Application.Bots.Models
     }
 
     /// <param name="Style">null، primary (دکمه‌ی اصلی) یا back (بازگشت، تمام عرض).</param>
-    public sealed record BotButton(string Text, string Data, string? Style = null);
+    public sealed record BotButton(string Text, string Data, string? Style = null, string? Url = null);
 
     public sealed record BotCardRow(string Label, string Value);
 

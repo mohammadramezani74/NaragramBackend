@@ -65,6 +65,13 @@ namespace CleanArchitecture.Domain.Entities.Chat
         /// گفتگوی موازی می‌سازند. مرتب بودن باعث می‌شود ترتیب ورودی مهم نباشد.
         /// </summary>
         public Guid? UserAId { get; set; }
+
+        /// <summary>بایگانی‌شده توسط ادمین: از لیست‌ها پنهان و فقط‌خواندنی؛ قابل برگشت.</summary>
+        public DateTime? ArchivedAt { get; private set; }
+
+        public void Archive() => ArchivedAt ??= DateTime.Now;
+
+        public void Restore() => ArchivedAt = null;
         public Guid? UserBId { get; set; }
 
         public static Conversation Create(User firstOne,User SecondsOne)
@@ -160,6 +167,13 @@ namespace CleanArchitecture.Domain.Entities.Chat
 
         }
    
+        /// <summary>ویرایش از پنل ادمین سامانه.</summary>
+        public void EditByAdmin(string title, string? description)
+        {
+            Title = title;
+            Description = description;
+        }
+
         public void ChangeGroupBio(string bio)
         {
             Description = bio;

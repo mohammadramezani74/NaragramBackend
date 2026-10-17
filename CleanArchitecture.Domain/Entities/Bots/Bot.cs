@@ -46,6 +46,13 @@ namespace CleanArchitecture.Domain.Entities.Bots
         /// </summary>
         public string CommandsJson { get; private set; } = "[]";
 
+        /// <summary>
+        /// ربات رسمی سازمان (مثل منابع انسانی): سیستم‌های بیرونی با کلید API می‌توانند از طرفش
+        /// به هر کاربر مجاز پیام بدهند، حتی اگر کاربر هنوز «شروع» را نزده باشد. ربات عادی
+        /// فقط به کسی پیام می‌دهد که شروعش کرده (مثل تلگرام).
+        /// </summary>
+        public bool IsOfficial { get; private set; }
+
         public static Bot Create(Guid userId, string handle, string? description, Guid createdBy)
         {
             var bot = new Bot
@@ -80,6 +87,12 @@ namespace CleanArchitecture.Domain.Entities.Bots
         {
             AccessMode = mode;
             AccessListJson = mode == BotAccessMode.All ? "[]" : accessListJson;
+            Touch();
+        }
+
+        public void SetOfficial(bool official)
+        {
+            IsOfficial = official;
             Touch();
         }
 

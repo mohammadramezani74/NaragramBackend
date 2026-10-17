@@ -34,11 +34,12 @@ namespace CleanArchitecture.Application.Bots.Engine
             return message;
         }
 
-        public async Task<Message> SendDocumentAsync(BotTurn turn, byte[] data, string fileName, string? caption)
+        public async Task<Message> SendDocumentAsync(BotTurn turn, byte[] data, string fileName, string? caption, BotReplyMarkup? markup = null)
         {
             var file = ChatFiles.CreateDocument(data, Path.GetExtension(fileName), fileName, data.LongLength, turn.BotUser.Id);
             var message = turn.Conversation.AddMessage(
                 Clip(caption ?? string.Empty), turn.BotUser, null, new List<ChatFiles> { file }, MessageType.Document);
+            message.SetReplyMarkup(markup?.ToJson());
 
             var fileDto = new ChatFilesDto { FileId = file.Id, FileName = file.FileName, FileSize = file.FileSize.ToString() };
             await AfterAddAsync(turn, message, string.IsNullOrWhiteSpace(caption) ? "فایل" : Preview(caption), fileDto);

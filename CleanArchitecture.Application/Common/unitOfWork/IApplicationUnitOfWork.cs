@@ -42,6 +42,12 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<Bot> Bots { get; }
         public DbSet<BotMenuNode> BotMenuNodes { get; }
         public DbSet<BotSession> BotSessions { get; }
+        public DbSet<BotApiKey> BotApiKeys { get; }
+        public DbSet<BotApiSend> BotApiSends { get; }
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.AdminAuditLog> AdminAuditLogs { get; }
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.Broadcast> Broadcasts { get; }
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.BroadcastDelivery> BroadcastDeliveries { get; }
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.AppSetting> AppSettings { get; }
 
     }
 }

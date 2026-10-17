@@ -49,6 +49,31 @@ namespace CleanArchitecture.Presentation.EndPoint.Bots
 
             admin.MapPost("/connectors/{key}/test", async ([FromServices] ISender sender, [FromRoute] string key, CancellationToken ct) =>
                 BotsEndpoint.ToResult(await sender.Send(new TestBotConnectorCommand(key), ct)));
+
+            // ارسال از بیرون: کلیدهای API، حالت رسمی و گزارش ارسال‌ها
+            admin.MapGet("/{id:guid}/api", async ([FromServices] ISender sender, [FromRoute] Guid id, CancellationToken ct) =>
+                BotsEndpoint.ToResult(await sender.Send(new GetBotApiQuery(id), ct)));
+
+            admin.MapPost("/{id:guid}/api/keys", async (
+                [FromServices] ISender sender,
+                [FromRoute] Guid id,
+                [FromBody] CreateKeyBody body,
+                CancellationToken ct) =>
+                BotsEndpoint.ToResult(await sender.Send(new CreateBotApiKeyCommand(id, body.Name), ct)));
+
+            admin.MapDelete("/{id:guid}/api/keys/{keyId:guid}", async (
+                [FromServices] ISender sender,
+                [FromRoute] Guid id,
+                [FromRoute] Guid keyId,
+                CancellationToken ct) =>
+                BotsEndpoint.ToResult(await sender.Send(new RevokeBotApiKeyCommand(id, keyId), ct)));
+
+            admin.MapPut("/{id:guid}/api/official", async (
+                [FromServices] ISender sender,
+                [FromRoute] Guid id,
+                [FromBody] OfficialBody body,
+                CancellationToken ct) =>
+                BotsEndpoint.ToResult(await sender.Send(new SetBotOfficialCommand(id, body.IsOfficial), ct)));
         }
 
         public sealed record UpdateBotBody(
@@ -60,5 +85,9 @@ namespace CleanArchitecture.Presentation.EndPoint.Bots
             List<BotCommandItem>? Commands);
 
         public sealed record SaveMenuBody(List<BotMenuNodeDto> Nodes);
+
+        public sealed record CreateKeyBody(string Name);
+
+        public sealed record OfficialBody(bool IsOfficial);
     }
 }

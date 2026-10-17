@@ -31,6 +31,14 @@ namespace CleanArchitecture.Domain.Entities.Identity
         /// </summary>
         public bool IsBot { get; private set; }
         public DateTimeOffset? LastLoginDate { get; private set; }
+        /// <summary>زمان ساخت حساب. برای کاربرهای قدیمی (قبل از این ستون) خالی است.</summary>
+        public DateTimeOffset? CreatedAt { get; private set; }
+
+        /// <summary>حسابی که ادمین غیرفعال کرده: نمی‌تواند وارد شود و توکن‌هایش رد می‌شوند. داده‌اش می‌ماند.</summary>
+        public bool IsDisabled { get; private set; }
+        public DateTimeOffset? DisabledAt { get; private set; }
+        /// <summary>توکن‌هایی که قبل از این زمان ساخته شده‌اند پذیرفته نمی‌شوند («خروج از همه‌ی دستگاه‌ها»).</summary>
+        public DateTimeOffset? SessionsRevokedAt { get; private set; }
         public virtual ICollection<RefreshToken> RefreshTokens { get; internal set; } = new List<RefreshToken>();
         public virtual ICollection<UserAvatar> UserAvatars { get; internal set; } = new List<UserAvatar>();
         public virtual ICollection<FireBaseToken> firebaseTokens { get; internal set; } = new List<FireBaseToken>();
@@ -54,6 +62,7 @@ namespace CleanArchitecture.Domain.Entities.Identity
             AccessFailedCount = 7;
             IsActive = true;
             IsDoNotDisturb = false;
+            CreatedAt = DateTimeOffset.Now;
             this.bio = bio;
             if (address is not null)
             {
@@ -113,6 +122,35 @@ namespace CleanArchitecture.Domain.Entities.Identity
         {
             FirsName = displayName.Trim();
             LastName = string.Empty;
+        }
+
+        /// <summary>تغییر نام از پنل ادمین. نمایش در برنامه «LastName FirsName» است.</summary>
+        public void RenameByAdmin(string lastName, string firstName)
+        {
+            LastName = lastName.Trim();
+            FirsName = firstName.Trim();
+        }
+
+        public void Disable()
+        {
+            IsDisabled = true;
+            DisabledAt = DateTimeOffset.Now;
+            RevokeSessions();
+        }
+
+        public void Enable()
+        {
+            IsDisabled = false;
+            DisabledAt = null;
+        }
+
+        /// <summary>همه‌ی رفرش‌توکن‌ها باطل و توکن‌های دسترسیِ قبلی رد می‌شوند.</summary>
+        public void RevokeSessions()
+        {
+            var now = DateTimeOffset.Now;
+            SessionsRevokedAt = now;
+            foreach (var token in RefreshTokens.Where(t => t.Revoked == null))
+                token.Revoked = now.UtcDateTime;
         }
 
         public void SetDoNotDisturb(bool isDoNotDisturb)

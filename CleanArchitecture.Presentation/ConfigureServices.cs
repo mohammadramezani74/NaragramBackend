@@ -102,6 +102,19 @@ namespace CleanArchitecture.Presentation
                                 }
                             }
                             return Task.CompletedTask;
+                        },
+                        // حساب غیرفعال یا توکنِ قبل از «خروج از همه‌ی دستگاه‌ها» رد می‌شود (توکن ۷ روز اعتبار دارد).
+                        OnTokenValidated = async context =>
+                        {
+                            var raw = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                      ?? context.Principal?.FindFirst("sub")?.Value;
+                            if (!Guid.TryParse(raw, out var userId))
+                                return;
+
+                            var guard = context.HttpContext.RequestServices
+                                .GetRequiredService<CleanArchitecture.Application.Abstraction.Authentication.IUserAccessGuard>();
+                            if (!await guard.IsAllowedAsync(userId, context.SecurityToken.ValidFrom, context.HttpContext.RequestAborted))
+                                context.Fail("account disabled or session revoked");
                         }
                     };
                 });

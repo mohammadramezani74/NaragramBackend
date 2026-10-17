@@ -59,9 +59,12 @@ public static class ConfigureServices
         services.AddScoped<IApplicationRoleManager, ApplicationRoleManager>();
         services.AddScoped<ITokenProvider, TokenProvider>();
         services.AddScoped<IAdminAccess, AdminAccess>();
+        services.AddSingleton<IUserAccessGuard, UserAccessGuard>();
+        services.AddScoped<IAdminIdentityService, AdminIdentityService>();
 
         // موتور ربات در پس‌زمینه؛ اتصال‌ها/جریان‌هایی که در این اسمبلی نوشته شوند هم پیدا می‌شوند.
         services.AddHostedService<BotDispatcherService>();
+        services.AddHostedService<BroadcastDispatcherService>();
         services.AddBotParts(typeof(ConfigureServices).Assembly);
         services.AddTransient<ICacheService, CacheService>();
         services.AddScoped<ICsvFileBuilder,CsvFileBuilder>();

@@ -33,5 +33,11 @@ namespace CleanArchitecture.Infrastructure.Persistence.UnitofWork
         public DbSet<Bot> Bots => _context.Set<Bot>();
         public DbSet<BotMenuNode> BotMenuNodes => _context.Set<BotMenuNode>();
         public DbSet<BotSession> BotSessions => _context.Set<BotSession>();
+        public DbSet<BotApiKey> BotApiKeys => _context.Set<BotApiKey>();
+        public DbSet<BotApiSend> BotApiSends => _context.Set<BotApiSend>();
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.AdminAuditLog> AdminAuditLogs => _context.Set<CleanArchitecture.Domain.Entities.Admin.AdminAuditLog>();
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.Broadcast> Broadcasts => _context.Set<CleanArchitecture.Domain.Entities.Admin.Broadcast>();
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.BroadcastDelivery> BroadcastDeliveries => _context.Set<CleanArchitecture.Domain.Entities.Admin.BroadcastDelivery>();
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.AppSetting> AppSettings => _context.Set<CleanArchitecture.Domain.Entities.Admin.AppSetting>();
     }
 }

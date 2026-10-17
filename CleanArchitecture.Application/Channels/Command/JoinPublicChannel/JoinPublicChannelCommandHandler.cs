@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 
 namespace CleanArchitecture.Application.Channels.Command.JoinPublicChannel
 {
-    internal class JoinPublicChannelCommandHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager) : ICommandHandler<JoinPublicChannelCommand>
+    internal class JoinPublicChannelCommandHandler(IApplicationUnitOfWork uow,IApplicationUserManager userManager,
+        CleanArchitecture.Application.Hubs.HubRoomMembership rooms) : ICommandHandler<JoinPublicChannelCommand>
     {
         private readonly IApplicationUnitOfWork _uow = uow;
         private readonly IApplicationUserManager _userManager = userManager;
@@ -25,12 +26,15 @@ namespace CleanArchitecture.Application.Channels.Command.JoinPublicChannel
                 .AnyAsync(x => x.ChannelId == request.ChannelId && x.UserId == userId);
             if (isExistMember)
             {
-                op.Failed("شما قبلا عضو این چنل شده اید!");
+                return op.Failed("شما قبلا عضو این چنل شده اید!");
             }
   
             var newmember= ChannelMember.Join(request.ChannelId, userId);
             _uow.ChannelMembers.Add(newmember);
-            await _uow.SaveChangesAsync();
+            var saved = await _uow.SaveChangesAsync();
+            if (saved.IsFailure)
+                return op.Failed("عضویت انجام نشد.");
+            await rooms.AddAsync(request.ChannelId, new[] { userId });
             return op.succedded();
         }
     }

@@ -39,6 +39,8 @@ namespace CleanArchitecture.Application.Groups.Command.SendFileMessage
                                                                (x => x.Id == request.ConversationId, cancellationToken);
             if (conversation == null)
                 return OperationResult.Failure<CreateFileMessageResponse>(op.Failed("مکالمه مورد نظر یافت نشد!"));
+            if (conversation.ArchivedAt != null)
+                return OperationResult.Failure<CreateFileMessageResponse>(op.Failed("این گروه بایگانی شده و پیام تازه نمی‌پذیرد."));
             if (!conversation.Users.Any(x => x.UserId == MyId))
                 return OperationResult.Failure<CreateFileMessageResponse>(op.Failed("شما عضو این گفتگو نیستید!"));
 

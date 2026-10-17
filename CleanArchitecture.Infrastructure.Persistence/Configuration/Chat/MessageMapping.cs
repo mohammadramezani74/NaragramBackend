@@ -55,6 +55,8 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
                     .OnDelete(DeleteBehavior.Cascade);
             builder.HasIndex(m => new { m.ChannelId, m.CreateDate });
             builder.HasIndex(m => new { m.ConversationId, m.CreateDate });
+            // آمار داشبورد ادمین (پیام‌ها در بازه‌ی زمانی، بدون گفتگوی مشخص)
+            builder.HasIndex(m => m.CreateDate);
 
             builder.HasOne(m => m.ParentMessage)
                     .WithMany(m => m.Replies)
