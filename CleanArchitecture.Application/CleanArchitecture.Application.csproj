@@ -34,6 +34,10 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
+    <!-- دیوان حافظ با تعبیر فال (۴۹۵ غزل) برای ربات دستیار؛ منبع: github.com/kavehbc/hafez (MIT) -->
+    <EmbeddedResource Include="Bots\Assistant\Data\hafez.json" LogicalName="Naragram.Hafez.json" />
+  </ItemGroup>
+  <ItemGroup>
     <Folder Include="Channels\Query\LoadMoreMessages\" />
     <Folder Include="Common\Interfaces\" />
   </ItemGroup>

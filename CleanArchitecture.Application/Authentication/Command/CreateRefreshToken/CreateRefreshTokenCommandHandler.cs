@@ -15,7 +15,9 @@ internal sealed class CreateRefreshTokenCommandHandler(ITokenProvider tokenProvi
         var tokenInfo = await _tokenProvider.RefreshToken(request.RefreshToken);
         if (!tokenInfo.HasValue)
         {
-            return new TokenResponse(string.Empty, string.Empty);
+            // قبلاً «موفق» با توکن خالی برمی‌گشت؛ حالا ناموفق، تا endpoint کد 401 بدهد.
+            return OperationResult.Failure<TokenResponse>(
+                new OperationResult().Failed("نشست شما تمام شده است؛ دوباره وارد شوید."));
         }
         return new TokenResponse(tokenInfo.Value.accessToken, tokenInfo.Value.refreshToken);
     }

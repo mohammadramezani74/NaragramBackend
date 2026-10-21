@@ -36,6 +36,9 @@ namespace CleanArchitecture.Application
             services.AddSingleton<IBotUpdateQueue>(new BotUpdateQueue(partitions: 4));
             services.AddScoped<BotMessenger>();
             services.AddSingleton<CleanArchitecture.Application.Bots.Api.BotApiRateLimiter>();
+            // ربات دستیار: تقویم بدون اینترنت و خلاصه‌ی صبحگاهی (آب‌وهوا و قیمت‌ها اتصال‌اند و خودکار ثبت می‌شوند)
+            services.AddSingleton<CleanArchitecture.Application.Bots.Assistant.PersianCalendarService>();
+            services.AddScoped<CleanArchitecture.Application.Bots.Assistant.IAssistantDigestService, CleanArchitecture.Application.Bots.Assistant.AssistantDigestService>();
             services.AddScoped<CleanArchitecture.Application.Bots.Api.IBotApiService, CleanArchitecture.Application.Bots.Api.BotApiService>();
             services.AddScoped<IBotEngine, BotEngine>();
             services.AddScoped<CleanArchitecture.Application.AdminPanel.IBroadcastSender, CleanArchitecture.Application.AdminPanel.BroadcastSender>();

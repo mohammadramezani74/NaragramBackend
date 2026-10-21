@@ -155,7 +155,8 @@ internal sealed class TokenProvider(IConfiguration configuration,
     {
         string? ipAddress = GetUseIp();
         var User_agent = _httpContext.HttpContext.Request.Headers["User-Agent"].ToString();
-        var expire = DateTime.Now.AddMinutes(int.Parse(configuration["Jwt:ExpirationRefreshInMinutes"]!));
+        // UTC، چون RefreshToken.IsExpired با DateTime.UtcNow مقایسه می‌کند.
+        var expire = DateTime.UtcNow.AddMinutes(int.Parse(configuration["Jwt:ExpirationRefreshInMinutes"]!));
         using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
         {
             var randomBytes = new byte[64];

@@ -54,7 +54,10 @@ namespace CleanArchitecture.Application.Bots.Flows
     }
 
     /// <summary>کاربری که با ربات حرف می‌زند؛ همیشه از سرور، هیچ‌وقت از ورودی کاربر.</summary>
-    public sealed record BotFlowUser(Guid Id, string FullName, string? NationalCode, string? PhoneNumber);
+    /// <param name="City">شهر پروفایل (Address.City)، اگر ثبت شده باشد.</param>
+    public sealed record BotFlowUser(
+        Guid Id, string FullName, string? NationalCode, string? PhoneNumber,
+        string? City = null, string? FirstName = null);
 
     /// <param name="Value">مقداری که به جریان برمی‌گردد.</param>
     /// <param name="Label">متن دکمه.</param>

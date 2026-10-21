@@ -65,6 +65,7 @@ public static class ConfigureServices
         // موتور ربات در پس‌زمینه؛ اتصال‌ها/جریان‌هایی که در این اسمبلی نوشته شوند هم پیدا می‌شوند.
         services.AddHostedService<BotDispatcherService>();
         services.AddHostedService<BroadcastDispatcherService>();
+        services.AddHostedService<AssistantDigestDispatcherService>();
         services.AddBotParts(typeof(ConfigureServices).Assembly);
         services.AddTransient<ICacheService, CacheService>();
         services.AddScoped<ICsvFileBuilder,CsvFileBuilder>();

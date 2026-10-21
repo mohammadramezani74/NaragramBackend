@@ -347,10 +347,12 @@ namespace CleanArchitecture.Application.Bots.Engine
                 turn.Human.Id,
                 $"{turn.Human.FirsName} {turn.Human.LastName}".Trim(),
                 turn.Human.NationalCode,
-                turn.Human.PhoneNumber);
+                turn.Human.PhoneNumber,
+                turn.Human.Address?.City,
+                turn.Human.FirsName);
 
             var execution = new BotFlowExecution(turn, messenger, state, input, firstRun);
-            var context = new BotFlowContext(execution, user, parameters);
+            var context = new BotFlowContext(execution, user, parameters, turn.Bot.Id);
 
             IBotFlow flow;
             try

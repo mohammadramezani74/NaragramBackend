@@ -13,14 +13,18 @@ namespace CleanArchitecture.Application.Bots.Flows
     {
         private readonly BotFlowExecution _run;
 
-        internal BotFlowContext(BotFlowExecution run, BotFlowUser user, IReadOnlyDictionary<string, string> parameters)
+        internal BotFlowContext(BotFlowExecution run, BotFlowUser user, IReadOnlyDictionary<string, string> parameters, Guid botId = default)
         {
             _run = run;
             User = user;
             Params = parameters;
+            BotId = botId;
         }
 
         public BotFlowUser User { get; }
+
+        /// <summary>رباتی که این جریان در آن اجرا می‌شود (Bots.Id).</summary>
+        public Guid BotId { get; }
 
         /// <summary>تنظیم‌هایی که ادمین برای این گزینه‌ی منو داده (FlowParam).</summary>
         public IReadOnlyDictionary<string, string> Params { get; }

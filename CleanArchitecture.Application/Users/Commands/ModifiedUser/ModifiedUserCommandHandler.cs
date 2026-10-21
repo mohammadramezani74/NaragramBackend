@@ -23,10 +23,9 @@ namespace CleanArchitecture.Application.Users.Commands.ModifiedUser
             {
                 throw new ArgumentNullException("User is Null");
             }
-            if (!string.IsNullOrWhiteSpace(request.phoneNumber))
-            {
-                user.PhoneNumber = request.phoneNumber;
-            }
+            // شماره‌ی موبایل از این‌جا عوض نمی‌شود: ورود و ارسال ربات‌ها کاربر را با شماره پیدا می‌کنند
+            // و تغییر بدون تأیید، شماره‌ی تکراری می‌سازد. رابط کاربری هم جایی برای تغییرش ندارد؛
+            // فیلد phoneNumber برای سازگاری با کلاینت‌های قدیمی در درخواست مانده ولی نادیده گرفته می‌شود.
             if (!string.IsNullOrWhiteSpace(request.bio))
             {
                 user.bio = request.bio;

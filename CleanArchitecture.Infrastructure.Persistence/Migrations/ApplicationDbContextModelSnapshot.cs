@@ -631,6 +631,43 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.ToTable("BotSessions", (string)null);
                 });
 
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Bots.BotSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly?>("LastSentOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BotId", "Topic", "LastSentOn");
+
+                    b.HasIndex("BotId", "UserId", "Topic")
+                        .IsUnique()
+                        .HasDatabaseName("UX_BotSubscriptions_Bot_User_Topic");
+
+                    b.ToTable("BotSubscriptions", (string)null);
+                });
+
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.Channel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2218,6 +2255,15 @@ namespace CleanArchitecture.Infrastructure.Persistence.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("ModifiedBy");
+                });
+
+            modelBuilder.Entity("CleanArchitecture.Domain.Entities.Bots.BotSubscription", b =>
+                {
+                    b.HasOne("CleanArchitecture.Domain.Entities.Bots.Bot", null)
+                        .WithMany()
+                        .HasForeignKey("BotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CleanArchitecture.Domain.Entities.ChannelsAgg.Channel", b =>

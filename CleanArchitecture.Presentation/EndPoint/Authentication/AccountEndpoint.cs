@@ -52,20 +52,27 @@ public class AccountEndpoint : IEndpoint
 
         // ورود با گوگل حذف شد: ناراگرام از آن استفاده نمی‌کند و هر حساب گوگلی را عضو می‌کرد.
 
+        // تازه کردن توکن درست وقتی صدا زده می‌شود که توکن دسترسی منقضی شده؛ پس نباید توکن
+        // دسترسی بخواهد (احراز هویت با خود refresh token است). قبلاً این مسیر زیر RequireAuthorization
+        // گروه بود و همیشه 401 می‌داد؛ برای همین کاربرها بعد از انقضای توکن دسترسی (۷ روز)
+        // بیرون می‌افتادند، با اینکه refresh token تا ۱۴ روز معتبر بود.
         app.MapPost("RefreshToken", async ([FromServices] ISender Mediatr,
  [FromBody] CreateRefreshTokenCommand command, CancellationToken cancellationToken) =>
         {
 
             var result = await Mediatr.Send(command, cancellationToken);
-            return Results.Ok(result);
-        });
+            return result.IsSucceded
+                ? Results.Ok(result)
+                : Results.Json(result, statusCode: StatusCodes.Status401Unauthorized);
+        }).AllowAnonymous();
 
+        // خروج با توکن دسترسیِ منقضی‌شده هم باید refresh token را باطل کند.
         app.MapPost("RevokeToken", async ([FromServices] ISender Mediatr,
 [FromBody] RevokeTokenCommand command, CancellationToken cancellationToken) =>
         {
 
             var result = await Mediatr.Send(command, cancellationToken);
             return Results.Ok(result);
-        });
+        }).AllowAnonymous();
     }
 }
