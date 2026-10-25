@@ -32,7 +32,13 @@ namespace CleanArchitecture.Application.Bots.Models
     /// <param name="Style">null، primary (دکمه‌ی اصلی) یا back (بازگشت، تمام عرض).</param>
     public sealed record BotButton(string Text, string Data, string? Style = null, string? Url = null);
 
-    public sealed record BotCardRow(string Label, string Value);
+    /// <param name="Kind">
+    /// شکل ردیف: null معمولی (برچسب و مقدار)، section سرتیتر بخش، hero عدد بزرگ
+    /// بالای کارت، bar با نوار سهم (Percent)، total ردیف جمع پررنگ، note یادداشت تمام‌عرض.
+    /// فرانت قدیمی Kind را نمی‌شناسد و همه را ردیف معمولی نشان می‌دهد.
+    /// </param>
+    /// <param name="Percent">فقط برای bar: ۰ تا ۱۰۰.</param>
+    public sealed record BotCardRow(string Label, string Value, string? Kind = null, double? Percent = null);
 
     /// <summary>یک دستور منوی «/» که به یک گره منو اشاره می‌کند.</summary>
     public sealed record BotCommandItem(string Command, string Description, Guid NodeId);
