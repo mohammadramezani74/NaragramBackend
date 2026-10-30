@@ -39,6 +39,8 @@ namespace CleanArchitecture.Application
             // ربات دستیار: تقویم بدون اینترنت و خلاصه‌ی صبحگاهی (آب‌وهوا و قیمت‌ها اتصال‌اند و خودکار ثبت می‌شوند)
             services.AddSingleton<CleanArchitecture.Application.Bots.Assistant.PersianCalendarService>();
             services.AddScoped<CleanArchitecture.Application.Bots.Assistant.IAssistantDigestService, CleanArchitecture.Application.Bots.Assistant.AssistantDigestService>();
+            // ربات منابع انسانی: خلاصه‌ی صبحگاهی کارتابل INTS
+            services.AddScoped<CleanArchitecture.Application.Bots.Hr.IKartableDigestService, CleanArchitecture.Application.Bots.Hr.KartableDigestService>();
             services.AddScoped<CleanArchitecture.Application.Bots.Api.IBotApiService, CleanArchitecture.Application.Bots.Api.BotApiService>();
             services.AddScoped<IBotEngine, BotEngine>();
             services.AddScoped<CleanArchitecture.Application.AdminPanel.IBroadcastSender, CleanArchitecture.Application.AdminPanel.BroadcastSender>();

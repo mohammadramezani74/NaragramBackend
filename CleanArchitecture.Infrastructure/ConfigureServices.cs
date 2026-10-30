@@ -66,6 +66,7 @@ public static class ConfigureServices
         services.AddHostedService<BotDispatcherService>();
         services.AddHostedService<BroadcastDispatcherService>();
         services.AddHostedService<AssistantDigestDispatcherService>();
+        services.AddHostedService<KartableDigestDispatcherService>();
         services.AddBotParts(typeof(ConfigureServices).Assembly);
         services.AddTransient<ICacheService, CacheService>();
         services.AddScoped<ICsvFileBuilder,CsvFileBuilder>();
