@@ -15,7 +15,7 @@ namespace CleanArchitecture.Presentation.EndPoint.Bots
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            var admin = app.MapGroup(string.Empty).AdminOnly();
+            var admin = app.MapGroup(string.Empty).AdminOnly(CleanArchitecture.Application.AdminPanel.PanelPermissions.Bots);
 
             admin.MapGet("/", async ([FromServices] ISender sender, CancellationToken ct) =>
                 BotsEndpoint.ToResult(await sender.Send(new GetBotsAdminQuery(), ct)));

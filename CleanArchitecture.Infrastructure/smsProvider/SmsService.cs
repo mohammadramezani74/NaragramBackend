@@ -43,6 +43,12 @@ namespace CleanArchitecture.Infrastructure.smsProvider
             return result;
         }
 
+        public async Task SendTemplateAsync(string phoneNumber, int templateId, IReadOnlyDictionary<string, string> parameters)
+        {
+            await smsIr.VerifySendAsync(phoneNumber, templateId,
+                parameters.Select(p => new VerifySendParameter(p.Key, p.Value)).ToArray());
+        }
+
         public async Task SendVerificationCode(string phoneNumber, string code)
         {
             try

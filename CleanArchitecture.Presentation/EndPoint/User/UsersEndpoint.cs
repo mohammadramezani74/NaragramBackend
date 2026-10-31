@@ -54,7 +54,7 @@ public sealed class UsersEndpoint:IEndpoint
             if(result.IsSucceded)
             return Results.File(result.result.Content,result.result.ContentType,result.result.FileName);
           return  Results.NotFound();
-        }).AdminOnly();
+        }).AdminOnly(CleanArchitecture.Application.AdminPanel.PanelPermissions.Users);
         
         app.MapPost("register", async ([FromServices] ISender Mediatr, 
          [FromBody] CreateUserCommand UserRegisterDto, CancellationToken cancellationToken) =>
@@ -63,7 +63,7 @@ public sealed class UsersEndpoint:IEndpoint
             var response = await Mediatr.Send(UserRegisterDto, cancellationToken);
 
             return Results.Ok(response);
-        }).AdminOnly(); // ساخت کاربر با نام کاربری و رمز؛ قبلاً بدون ورود باز بود
+        }).AdminOnly(CleanArchitecture.Application.AdminPanel.PanelPermissions.Users); // ساخت کاربر با نام کاربری و رمز؛ قبلاً بدون ورود باز بود
         
         app.MapPost("register-or-login", async ([FromServices] ISender Mediatr,
  [FromBody] LoginOrRegisterCommand UserRegisterDto, CancellationToken cancellationToken) =>
@@ -88,7 +88,7 @@ public sealed class UsersEndpoint:IEndpoint
 
             var response = await Mediatr.Send(UserRegisterDto, cancellationToken);
             return Results.Ok(response);
-        }).AdminOnly();
+        }).AdminOnly(CleanArchitecture.Application.AdminPanel.PanelPermissions.Roles);
 
 
         app.MapPost("User/SetProfile", async (

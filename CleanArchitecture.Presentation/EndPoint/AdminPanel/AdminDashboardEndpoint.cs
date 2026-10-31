@@ -14,7 +14,7 @@ namespace CleanArchitecture.Presentation.EndPoint.AdminPanel
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            var admin = app.MapGroup(string.Empty).AdminOnly();
+            var admin = app.MapGroup(string.Empty).AdminOnly(PanelPermissions.Dashboard);
 
             admin.MapGet("/", async ([FromServices] ISender sender, [FromQuery] int? days, CancellationToken ct) =>
                 BotsEndpoint.ToResult(await sender.Send(new GetAdminDashboardQuery(days ?? 7), ct)));

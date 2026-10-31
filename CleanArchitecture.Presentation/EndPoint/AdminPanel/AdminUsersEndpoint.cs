@@ -22,22 +22,29 @@ namespace CleanArchitecture.Presentation.EndPoint.AdminPanel
                 [FromQuery] int? page, [FromQuery] int? size, [FromQuery] string? search,
                 [FromQuery] string? status, [FromQuery] string? city, [FromQuery] Guid? roleId,
                 CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new GetAdminUsersQuery(page ?? 1, size ?? 25, search, status, city, roleId), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new GetAdminUsersQuery(page ?? 1, size ?? 25, search, status, city, roleId), ct)))
+                // فهرست کاربران در انتخاب مخاطب پیام همگانی هم لازم است
+                .AdminOnly(PanelPermissions.Users, PanelPermissions.Broadcast);
 
             admin.MapGet("/{id:guid}", async ([FromServices] ISender sender, [FromRoute] Guid id, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new GetAdminUserQuery(id), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new GetAdminUserQuery(id), ct)))
+                .AdminOnly(PanelPermissions.Users);
 
             admin.MapPost("/{id:guid}/phone", async ([FromServices] ISender sender, [FromRoute] Guid id, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new RevealUserPhoneCommand(id), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new RevealUserPhoneCommand(id), ct)))
+                .AdminOnly(PanelPermissions.Users);
 
             admin.MapPost("/{id:guid}/access", async ([FromServices] ISender sender, [FromRoute] Guid id, [FromBody] AccessBody body, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new SetUserAccessCommand(id, body.Action, body.Reason), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new SetUserAccessCommand(id, body.Action, body.Reason), ct)))
+                .AdminOnly(PanelPermissions.Users);
 
             admin.MapPut("/{id:guid}/name", async ([FromServices] ISender sender, [FromRoute] Guid id, [FromBody] NameBody body, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new RenameUserCommand(id, body.FirstName, body.LastName), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new RenameUserCommand(id, body.FirstName, body.LastName), ct)))
+                .AdminOnly(PanelPermissions.Users);
 
             admin.MapPut("/{id:guid}/roles", async ([FromServices] ISender sender, [FromRoute] Guid id, [FromBody] RolesBody body, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new SetUserRolesCommand(id, body.RoleIds), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new SetUserRolesCommand(id, body.RoleIds), ct)))
+                .AdminOnly(PanelPermissions.Users);
         }
     }
 
@@ -54,13 +61,16 @@ namespace CleanArchitecture.Presentation.EndPoint.AdminPanel
                 BotsEndpoint.ToResult(await sender.Send(new GetAdminRolesQuery(), ct)));
 
             admin.MapPost("/", async ([FromServices] ISender sender, [FromBody] RoleBody body, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new ManageRoleCommand("create", null, body.Name), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new ManageRoleCommand("create", null, body.Name), ct)))
+                .AdminOnly(PanelPermissions.Roles);
 
             admin.MapPut("/{id:guid}", async ([FromServices] ISender sender, [FromRoute] Guid id, [FromBody] RoleBody body, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new ManageRoleCommand("rename", id, body.Name), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new ManageRoleCommand("rename", id, body.Name), ct)))
+                .AdminOnly(PanelPermissions.Roles);
 
             admin.MapDelete("/{id:guid}", async ([FromServices] ISender sender, [FromRoute] Guid id, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new ManageRoleCommand("delete", id, null), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new ManageRoleCommand("delete", id, null), ct)))
+                .AdminOnly(PanelPermissions.Roles);
         }
     }
 
@@ -72,7 +82,7 @@ namespace CleanArchitecture.Presentation.EndPoint.AdminPanel
 
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            var admin = app.MapGroup(string.Empty).AdminOnly();
+            var admin = app.MapGroup(string.Empty).AdminOnly(PanelPermissions.Rooms);
 
             admin.MapGet("/{kind}", async (
                 [FromServices] ISender sender, [FromRoute] string kind,

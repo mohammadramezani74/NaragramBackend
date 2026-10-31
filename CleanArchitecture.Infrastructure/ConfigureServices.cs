@@ -59,6 +59,9 @@ public static class ConfigureServices
         services.AddScoped<IApplicationRoleManager, ApplicationRoleManager>();
         services.AddScoped<ITokenProvider, TokenProvider>();
         services.AddScoped<IAdminAccess, AdminAccess>();
+        // تأیید دوم پنل مدیریت: وضعیت در حافظه (singleton)، منطق در هر درخواست
+        services.AddSingleton<AdminSessionStore>();
+        services.AddScoped<IAdminSessionService, AdminSessionService>();
         services.AddSingleton<IUserAccessGuard, UserAccessGuard>();
         services.AddScoped<IAdminIdentityService, AdminIdentityService>();
 

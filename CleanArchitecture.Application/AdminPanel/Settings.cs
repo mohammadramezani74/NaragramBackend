@@ -30,12 +30,16 @@ namespace CleanArchitecture.Application.AdminPanel
         Task<AnnouncementSetting> AnnouncementAsync(CancellationToken ct = default);
         Task<CreationSetting> CreationAsync(CancellationToken ct = default);
         Task SaveAsync<T>(string key, T value, string byName, CancellationToken ct = default);
+
+        /// <summary>مدیران غیرمالک و دسترسی‌هایشان (صفحه‌ی «مدیران»).</summary>
+        Task<List<AdminGrant>> AdminGrantsAsync(CancellationToken ct = default);
     }
 
     internal sealed class AppSettingsStore(IApplicationUnitOfWork uow, ICacheService cache) : IAppSettingsStore
     {
         public const string AnnouncementKey = "announcement";
         public const string CreationKey = "creation";
+        public const string AdminGrantsKey = "admin.grants";
 
         private static readonly AnnouncementSetting DefaultAnnouncement = new(false, string.Empty, "info", null, null, null);
         private static readonly CreationSetting DefaultCreation = new("all", new List<Guid>(), "all", new List<Guid>());
@@ -49,6 +53,13 @@ namespace CleanArchitecture.Application.AdminPanel
         public async Task<CreationSetting> CreationAsync(CancellationToken ct = default)
             => (await ReadAsync(CreationKey, DefaultCreation, ct)).Value;
 
+        public async Task<List<AdminGrant>> AdminGrantsAsync(CancellationToken ct = default)
+        {
+            var grants = (await ReadAsync(AdminGrantsKey, new List<AdminGrant>(), ct)).Value;
+            AdminGrantsSnapshot.Set(grants);
+            return grants;
+        }
+
         public async Task SaveAsync<T>(string key, T value, string byName, CancellationToken ct = default)
         {
             var json = BotJson.Serialize(value);
@@ -60,6 +71,8 @@ namespace CleanArchitecture.Application.AdminPanel
                 throw new InvalidOperationException("ذخیره‌ی تنظیمات انجام نشد: " + saved.Message);
             // کش همین سرور فوراً تازه می‌شود
             cache.Set<(T, DateTime?)>(CacheKey(key), (value, DateTime.Now), TimeSpan.FromSeconds(30));
+            if (value is List<AdminGrant> grants)
+                AdminGrantsSnapshot.Set(grants);
         }
 
         // تنظیمات روی هر درخواست ساخت گروه و هر بار باز شدن برنامه خوانده می‌شود؛ ۳۰ ثانیه کش.
@@ -93,7 +106,9 @@ namespace CleanArchitecture.Application.AdminPanel
     {
         public async Task<bool> CanCreateAsync(Guid userId, string kind, CancellationToken ct = default)
         {
-            if (admin.IsAdmin(userId))
+            // فقط مالک‌ها همیشه می‌توانند؛ مدیری که مثلاً فقط داشبورد را دارد نباید
+            // از قانون ساخت معاف شود.
+            if (admin.IsOwner(userId))
                 return true;
 
             var rule = await settings.CreationAsync(ct);

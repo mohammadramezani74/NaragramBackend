@@ -14,17 +14,20 @@ namespace CleanArchitecture.Presentation.EndPoint.AdminPanel
             var admin = app.MapGroup(string.Empty).AdminOnly();
 
             admin.MapGet("/usage", async ([FromServices] ISender sender, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new GetUsageReportQuery(from ?? DateTime.Today.AddDays(-29), to ?? DateTime.Today), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new GetUsageReportQuery(from ?? DateTime.Today.AddDays(-29), to ?? DateTime.Today), ct)))
+                .AdminOnly(PanelPermissions.Reports);
 
             admin.MapGet("/inactive", async ([FromServices] ISender sender, [FromQuery] int? days, [FromQuery] int? take, CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new GetInactiveUsersQuery(days ?? 30, take ?? 200), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new GetInactiveUsersQuery(days ?? 30, take ?? 200), ct)))
+                .AdminOnly(PanelPermissions.Reports);
 
             admin.MapGet("/audit", async (
                 [FromServices] ISender sender,
                 [FromQuery] int? page, [FromQuery] int? size, [FromQuery] string? area, [FromQuery] Guid? actorId,
                 [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? search,
                 CancellationToken ct) =>
-                BotsEndpoint.ToResult(await sender.Send(new GetAuditLogQuery(page ?? 1, size ?? 25, area, actorId, from, to, search), ct)));
+                BotsEndpoint.ToResult(await sender.Send(new GetAuditLogQuery(page ?? 1, size ?? 25, area, actorId, from, to, search), ct)))
+                .AdminOnly(PanelPermissions.Audit);
         }
     }
 }

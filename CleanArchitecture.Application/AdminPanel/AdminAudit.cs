@@ -60,6 +60,10 @@ namespace CleanArchitecture.Application.AdminPanel
             "bot.key.create" => "کلید API ربات ساخته شد",
             "bot.key.revoke" => "کلید API ربات باطل شد",
             "bot.official" => "حالت رسمی ربات تغییر کرد",
+            "admin.login" => "با کد پیامکی وارد پنل مدیریت شد",
+            "admin.grant" => "دسترسی مدیریت داده یا تغییر داده شد",
+            "admin.revoke" => "از مدیران حذف شد",
+            "admin.signout" => "از پنل مدیریت خارج شد",
             _ => action,
         };
 
