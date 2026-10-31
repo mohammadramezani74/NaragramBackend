@@ -1,4 +1,5 @@
 ﻿using CleanArchitecture.Domain.Entities.Chat;
+using CleanArchitecture.Infrastructure.Persistence.Encryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SharedKernel;
@@ -22,9 +23,17 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
 
             builder.HasIndex(m => new { m.ChannelId, m.IsPinned })
                    .HasFilter("[IsPinned] = 1");
+            // سقف ۴۰۹۶ برای متن ساده است (ولیدیتور). ستون از قبل nvarchar(max) است
+            // و متن رمزشده که بلندتر است جا می‌شود. رمزنگاری فقط پیام‌های جدید را
+            // می‌گیرد؛ پیام‌های قدیمی ساده می‌مانند و همان‌طور خوانده می‌شوند.
             builder.Property(m => m.Content)
                 .IsRequired()
-                .HasMaxLength(4096);
+                .HasMaxLength(4096)
+                .HasConversion(EncryptedStringConverter.Instance);
+
+            // کارت‌های ربات (مثل فیش حقوقی) هم محرمانه‌اند
+            builder.Property(m => m.ReplyMarkup)
+                .HasConversion(EncryptedStringConverter.Instance);
 
             // برچسب «فوروارد شده». nullable است، پس اضافه شدنش به جدول موجود
             // فقط تغییر متادیتاست و جدول را بازنویسی نمی‌کند.

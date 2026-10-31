@@ -1,4 +1,5 @@
 using CleanArchitecture.Domain.Entities.Chat;
+using CleanArchitecture.Infrastructure.Persistence.Encryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,14 +14,18 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Chat
             builder.HasKey(t => t.Id);
             builder.Property(t => t.Id).ValueGeneratedNever();
 
+            // سقف متن ساده در خود موجودیت است (۵۰۰ و ۲۰۰ نویسه). ستون‌ها جای
+            // نسخه‌ی رمزشده را دارند که حداکثر حدود چهار برابر می‌شود.
             builder.Property(t => t.Text)
                 .IsRequired()
-                .HasMaxLength(ContactTask.MaxTextLength);
+                .HasMaxLength(2100)
+                .HasConversion(EncryptedStringConverter.Instance);
 
             builder.Property(t => t.DueDate).HasColumnType("date");
 
             builder.Property(t => t.SourcePreview)
-                .HasMaxLength(ContactTask.MaxPreviewLength);
+                .HasMaxLength(900)
+                .HasConversion(EncryptedStringConverter.Instance);
 
             builder.HasOne(t => t.Owner)
                 .WithMany()

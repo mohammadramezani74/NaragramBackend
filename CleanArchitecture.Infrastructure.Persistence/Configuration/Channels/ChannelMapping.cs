@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using CleanArchitecture.Domain.Entities.ChannelsAgg;
+using CleanArchitecture.Infrastructure.Persistence.Encryption;
 
 namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Channels
 {
@@ -26,6 +27,10 @@ namespace CleanArchitecture.Infrastructure.Persistence.Configuration.Channels
 
             builder.Property(c => c.IsPublic)
                 .IsRequired();
+
+            // پیش‌نمایش آخرین پیام کانال؛ ستون از قبل nvarchar(max) است
+            builder.Property(c => c.LastMessageText)
+                .HasConversion(EncryptedStringConverter.Instance);
 
 
             builder.HasMany(c => c.Members)

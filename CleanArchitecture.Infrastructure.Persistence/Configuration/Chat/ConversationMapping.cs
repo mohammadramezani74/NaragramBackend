@@ -1,5 +1,6 @@
 ﻿using CleanArchitecture.Domain.Entities.Chat;
 using CleanArchitecture.Domain.ValueObjects.Chat;
+using CleanArchitecture.Infrastructure.Persistence.Encryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SharedKernel;
@@ -25,7 +26,11 @@ internal sealed class ConversationMapping : IEntityTypeConfiguration<Conversatio
                .HasFilter("[IsPrivate] = 1 AND [UserAId] IS NOT NULL AND [UserBId] IS NOT NULL")
                .HasDatabaseName("UX_Conversations_PrivatePair");
 
-        builder.Property(x => x.LastMessageText).HasMaxLength(100);
+        // پیش‌نمایش آخرین پیام (حداکثر ۱۰۰ نویسه‌ی ساده). رمزشده‌اش تا حدود ۴۵۰
+        // نویسه می‌شود، برای همین ستون ۵۰۰ است.
+        builder.Property(x => x.LastMessageText)
+            .HasMaxLength(500)
+            .HasConversion(EncryptedStringConverter.Instance);
         builder.Property(x => x.Title).IsRequired().HasMaxLength(500);
         builder.Property(x => x.UserName).HasMaxLength(140);
         builder.Property(x => x.Description).HasMaxLength(1500);
