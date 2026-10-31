@@ -41,11 +41,12 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
             });
             //GroupAvatarQuery
 
+            // ?nf=1: کاربر بی‌عکس 404 می‌گیرد به‌جای avatar.jpg (فرانت آواتار پیش‌فرض خودش را می‌کشد)
             app.MapGet("/{fileid:guid:required}/{ischannel:bool}/getAvatar", async ([FromServices] ISender sender
-     , [FromRoute] Guid fileid, [FromRoute] bool ischannel) =>
+     , [FromRoute] Guid fileid, [FromRoute] bool ischannel, [FromQuery] int? nf) =>
             {
 
-                var result = await sender.Send(new AvatarIdQuery(fileid, ischannel));
+                var result = await sender.Send(new AvatarIdQuery(fileid, ischannel, nf == 1));
                 if (!result.IsSucceded )
                 {
                     return Results.NotFound();
@@ -58,10 +59,10 @@ namespace CleanArchitecture.Presentation.EndPoint.Chat.ChatFiles
 
             }).AllowAnonymous();
             app.MapGet("/{fileid:guid:required}/getgroupAvatar", async ([FromServices] ISender sender
-, [FromRoute] Guid fileid) =>
+, [FromRoute] Guid fileid, [FromQuery] int? nf) =>
             {
 
-                var result = await sender.Send(new GroupAvatarQuery(fileid));
+                var result = await sender.Send(new GroupAvatarQuery(fileid, nf == 1));
                 if (!result.IsSucceded)
                 {
                     return Results.NotFound();

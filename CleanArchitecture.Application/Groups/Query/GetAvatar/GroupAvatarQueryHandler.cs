@@ -29,6 +29,9 @@ namespace CleanArchitecture.Application.Groups.Query.GetAvatar
 
                 if (data == null)
                 {
+                    if (request.NoDefault)
+                        return OperationResult.Failure<(byte[]?, string)>(op.Failed("AvatarNotFound"));
+
                     var defaultPath = Path.Combine(_env.ContentRootPath, "DefaultContent", "group2.svg");
                     if (!File.Exists(defaultPath))
                         return OperationResult.Failure<(byte[]?, string)>(op.Failed("AvatarNotFound"));

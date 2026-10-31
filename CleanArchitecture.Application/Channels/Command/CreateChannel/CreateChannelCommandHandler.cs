@@ -35,14 +35,16 @@ namespace CleanArchitecture.Application.Channels.Command.CreateChannel
                 var userId = _userManager.UserId!.Value;
                 if (!await creationPolicy.CanCreateAsync(userId, "channel", cancellationToken))
                     return op.Failed("ساخت کانال برای شما فعال نیست. با مدیر سیستم هماهنگ کنید.");
-                var claims = await _userManager.GetUserClaims(userId);
                 List<Guid>? allUserIds = new List<Guid>();
 
-                if (request.IsPublic && !claims.Contains("CreatePublicChannel"))
-                    return op.Failed("شما دسترسی ایجاد کانال با تمامی پرسنل را ندارید");
-
-                if (!request.IsPublic && !claims.Contains("CreatePrivateChannel"))
-                    return op.Failed("شما دسترسی ایجاد کانال را ندارید");
+                // کانال عمومی همه‌ی پرسنل را عضو می‌کند، پس هنوز Claim مخصوص می‌خواهد. کانال خصوصی
+                // فعلاً Claim نمی‌خواهد (CreatePrivateChannel برداشته شد)؛ فقط تنظیم پنل ادمین بالا.
+                if (request.IsPublic)
+                {
+                    var claims = await _userManager.GetUserClaims(userId);
+                    if (!claims.Contains("CreatePublicChannel"))
+                        return op.Failed("شما دسترسی ایجاد کانال با تمامی پرسنل را ندارید");
+                }
                 var exists = await _uow.Channels.AnyAsync(c => c.UserName == request.UserName, cancellationToken);
                 if (exists) return op.Failed("نام کاربری کانال تکراری است.");
                 var existsName = await _uow.Channels.AnyAsync(c => c.Title.Trim() == request.Title.Trim(), cancellationToken);

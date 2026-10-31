@@ -31,6 +31,9 @@ namespace CleanArchitecture.Application.Users.Queries.GetAvatar
 
                 if (data == null)
                 {
+                    if (request.noDefault)
+                        return OperationResult.Failure<(byte[]?, string)>(op.Failed("AvatarNotFound"));
+
                     var defaultPath = Path.Combine(_env.ContentRootPath, "DefaultContent", "chanel.png");
                     if (!File.Exists(defaultPath))
                         return OperationResult.Failure<(byte[]?, string)>(op.Failed("AvatarNotFound"));
@@ -64,6 +67,9 @@ namespace CleanArchitecture.Application.Users.Queries.GetAvatar
               
                     if (data == null)
                     {
+                        if (request.noDefault)
+                            return OperationResult.Failure<(byte[]?, string)>(op.Failed("AvatarNotFound"));
+
                         var defaultPath = Path.Combine(_env.ContentRootPath, "DefaultContent", "avatar.jpg");
                         if (!File.Exists(defaultPath))
                             return OperationResult.Failure<(byte[]?, string)>(op.Failed("AvatarNotFound"));
