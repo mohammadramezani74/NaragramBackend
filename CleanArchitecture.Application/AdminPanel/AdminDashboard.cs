@@ -7,6 +7,7 @@ using CleanArchitecture.Application.Common.unitOfWork;
 using CleanArchitecture.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace CleanArchitecture.Application.AdminPanel
 {
@@ -59,7 +60,8 @@ namespace CleanArchitecture.Application.AdminPanel
         IApplicationUnitOfWork uow,
         IAdminAccess admin,
         ICacheService cache,
-        UserOnlineService online)
+        UserOnlineService online,
+        ILogger<GetAdminDashboardQueryHandler> logger)
         : IQueryHandler<GetAdminDashboardQuery, AdminDashboardDto>
     {
         // آمار سنگین (روی جدول بزرگ پیام‌ها) یک دقیقه کش می‌شود؛ آنلاین‌ها همیشه تازه‌اند.
@@ -70,17 +72,69 @@ namespace CleanArchitecture.Application.AdminPanel
             if (!admin.CurrentUserIsAdmin)
                 return OperationResult.Failure<AdminDashboardDto>(new OperationResult().NotFound("یافت نشد."));
 
+            // آمار اصلی و روند جدا کش می‌شوند: عوض کردن ۷/۳۰ روز فقط روند را دوباره
+            // حساب می‌کند، نه کل داشبورد را.
             var days = request.Days >= 30 ? 30 : 7;
-            var stats = await cache.GetOrCreateAsync($"admin-dashboard:{days}", async entry =>
+            var stats = await cache.GetOrCreateAsync("admin-dashboard:core", async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = CacheFor;
-                return await BuildAsync(days, ct);
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                var built = await BuildAsync(ct);
+                logger.LogInformation("Admin dashboard stats built in {Ms} ms", watch.ElapsedMilliseconds);
+                return built;
+            });
+            var trend = await cache.GetOrCreateAsync($"admin-dashboard:trend:{days}", async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CacheFor;
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                var built = await TrendAsync(days, ct);
+                logger.LogInformation("Admin dashboard trend ({Days}d) built in {Ms} ms", days, watch.ElapsedMilliseconds);
+                return built;
             });
 
-            return OperationResult.Success(stats with { Online = await OnlineAsync(ct) });
+            return OperationResult.Success(stats with { Trend = trend, Online = await OnlineAsync(ct) });
         }
 
-        private async Task<AdminDashboardDto> BuildAsync(int days, CancellationToken ct)
+        /// <summary>
+        /// پیام در روز به تفکیک خصوصی/گروه/کانال. به‌جای JOIN هر پیام با گفتگو، اول بر اساس
+        /// روز و گفتگو شمرده می‌شود و خصوصی بودن گفتگوها جدا خوانده می‌شود.
+        /// </summary>
+        private async Task<List<DashboardDayPoint>> TrendAsync(int days, CancellationToken ct)
+        {
+            var since = DateTime.Now.Date.AddDays(-(days - 1));
+            var rows = await uow.Messages.AsNoTracking()
+                .Where(m => !m.Deleted && m.CreateDate >= since)
+                .GroupBy(m => new { Day = m.CreateDate.Date, m.ConversationId, IsChannel = m.ChannelId != null })
+                .Select(g => new { g.Key.Day, g.Key.ConversationId, g.Key.IsChannel, Count = g.Count() })
+                .ToListAsync(ct);
+
+            var conversationIds = rows.Where(r => !r.IsChannel && r.ConversationId != null)
+                .Select(r => r.ConversationId!.Value).Distinct().ToList();
+            var privateIds = conversationIds.Count == 0
+                ? new HashSet<Guid>()
+                : (await uow.Conversation.AsNoTracking()
+                    .Where(c => conversationIds.Contains(c.Id) && c.IsPrivate)
+                    .Select(c => c.Id)
+                    .ToListAsync(ct)).ToHashSet();
+
+            int Kind(Guid? conversationId, bool isChannel)
+                => isChannel ? 2 : conversationId is Guid id && privateIds.Contains(id) ? 0 : 1;
+
+            var byDay = rows
+                .GroupBy(r => (r.Day, Kind: Kind(r.ConversationId, r.IsChannel)))
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+
+            return Enumerable.Range(0, days)
+                .Select(i => since.AddDays(i))
+                .Select(d => new DashboardDayPoint(
+                    d,
+                    byDay.GetValueOrDefault((d, 0)),
+                    byDay.GetValueOrDefault((d, 1)),
+                    byDay.GetValueOrDefault((d, 2))))
+                .ToList();
+        }
+
+        private async Task<AdminDashboardDto> BuildAsync(CancellationToken ct)
         {
             var now = DateTime.Now; // CreateDate پیام‌ها با DateTime.Now ذخیره می‌شود
             var today = now.Date;
@@ -105,27 +159,8 @@ namespace CleanArchitecture.Application.AdminPanel
                 await channels.CountAsync(ct),
                 await channels.CountAsync(c => c.CreateDate >= weekAgo, ct));
 
-            // ---------------- روند: پیام در روز، به تفکیک نوع گفتگو
-            var since = today.AddDays(-(days - 1));
-            var rows = await messages
-                .Where(m => m.CreateDate >= since)
-                .Select(m => new
-                {
-                    Day = m.CreateDate.Date,
-                    Kind = m.ChannelId != null ? 2 : (m.Conversation != null && m.Conversation.IsPrivate ? 0 : 1)
-                })
-                .GroupBy(x => new { x.Day, x.Kind })
-                .Select(g => new { g.Key.Day, g.Key.Kind, Count = g.Count() })
-                .ToListAsync(ct);
-
-            var trend = Enumerable.Range(0, days)
-                .Select(i => since.AddDays(i))
-                .Select(d => new DashboardDayPoint(
-                    d,
-                    rows.Where(r => r.Day == d && r.Kind == 0).Sum(r => r.Count),
-                    rows.Where(r => r.Day == d && r.Kind == 1).Sum(r => r.Count),
-                    rows.Where(r => r.Day == d && r.Kind == 2).Sum(r => r.Count)))
-                .ToList();
+            // روند جدا حساب و کش می‌شود (TrendAsync)
+            var trend = new List<DashboardDayPoint>();
 
             // ---------------- کاربران بر اساس شهر (از INTS) و فعالیت
             var cityRows = await users
