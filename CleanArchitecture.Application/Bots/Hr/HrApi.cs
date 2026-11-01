@@ -101,6 +101,42 @@ namespace CleanArchitecture.Application.Bots.Hr
             return HrResult<Payslip>.Success(new Payslip(title, lines));
         }
 
+        /// <summary>
+        /// آخرین فیش صادرشده و فیش ماه قبلش (GetCurrentAndBeforePaymentSlip). INTS ردیف‌ها را صاف و
+        /// با year/month برمی‌گرداند؛ اینجا به دو فیش، جدیدتر اول، گروه می‌شوند.
+        /// </summary>
+        public static async Task<HrResult<List<DatedPayslip>>> GetTwoPayslipsAsync(IIntsConnector ints, string? phone, CancellationToken ct)
+        {
+            var r = await ints.SendAsync(HttpMethod.Get, "GetCurrentAndBeforePaymentSlip", phone ?? "", null, ct);
+            if (!r.Ok) return HrResult<List<DatedPayslip>>.Fail(r.Message);
+
+            var rows = new List<(int Year, int Month, PayslipLine Line)>();
+            if (r.Data is { ValueKind: JsonValueKind.Array } arr)
+            {
+                foreach (var e in arr.EnumerateArray())
+                {
+                    if (!int.TryParse(Str(e, "year"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var year)
+                        || !int.TryParse(Str(e, "month"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var month)
+                        || year <= 0 || month is < 1 or > 12)
+                        continue;
+
+                    var code = e.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetDecimal() : 0m;
+                    var group = (int)Math.Floor(code);
+                    var sub = (int)Math.Round((code - group) * 10);
+                    var label = HrText.Clean(Str(e, "title"));
+                    if (string.IsNullOrEmpty(label)) continue;
+                    rows.Add((year, month, new PayslipLine(group, sub, label, HrText.Clean(Str(e, "amount")) ?? "")));
+                }
+            }
+
+            var slips = rows
+                .GroupBy(x => (x.Year, x.Month))
+                .OrderByDescending(g => g.Key.Year).ThenByDescending(g => g.Key.Month)
+                .Select(g => new DatedPayslip(g.Key.Year, g.Key.Month, new Payslip(null, g.Select(x => x.Line).ToList())))
+                .ToList();
+            return HrResult<List<DatedPayslip>>.Success(slips);
+        }
+
         public static async Task<HrResult<HrProfile>> GetProfileAsync(IIntsConnector ints, string? phone, CancellationToken ct)
         {
             var r = await ints.SendAsync(HttpMethod.Get, "GetPersonnelProfile", phone ?? "", null, ct);
