@@ -45,10 +45,12 @@ namespace CleanArchitecture.Application.Common.unitOfWork
         public DbSet<BotApiKey> BotApiKeys { get; }
         public DbSet<BotApiSend> BotApiSends { get; }
         public DbSet<BotSubscription> BotSubscriptions { get; }
+        public DbSet<BotFlowRun> BotFlowRuns { get; }
         public DbSet<CleanArchitecture.Domain.Entities.Admin.AdminAuditLog> AdminAuditLogs { get; }
         public DbSet<CleanArchitecture.Domain.Entities.Admin.Broadcast> Broadcasts { get; }
         public DbSet<CleanArchitecture.Domain.Entities.Admin.BroadcastDelivery> BroadcastDeliveries { get; }
         public DbSet<CleanArchitecture.Domain.Entities.Admin.AppSetting> AppSettings { get; }
+        public DbSet<CleanArchitecture.Domain.Entities.Admin.AppFeedback> AppFeedbacks { get; }
 
     }
 }

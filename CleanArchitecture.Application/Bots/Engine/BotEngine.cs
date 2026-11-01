@@ -39,8 +39,12 @@ namespace CleanArchitecture.Application.Bots.Engine
         private static readonly string[] StartWords = { "/شروع", "/start" };
         private static readonly string[] HelpWords = { "/راهنما", "/help" };
 
+        // اجرای جریانی که در همین نوبت شروع شده؛ برای بستنش بدون خواندن دوباره از دیتابیس
+        private BotFlowRun? _run;
+
         public async Task HandleAsync(BotUpdate update, CancellationToken ct)
         {
+            _run = null;
             var bot = await uow.Bots.Include(b => b.User).FirstOrDefaultAsync(b => b.UserId == update.BotUserId, ct);
             if (bot?.User is null)
                 return;
@@ -109,6 +113,8 @@ namespace CleanArchitecture.Application.Bots.Engine
         private async Task StartAsync(BotTurn turn)
         {
             await TidyPendingAsync(turn, "لغو شد");
+            if (turn.Session.HasFlow)
+                await EndRunAsync(turn, BotFlowRun.Cancelled);
             turn.Session.Start();
 
             var root = turn.Menu.Root;
@@ -157,14 +163,14 @@ namespace CleanArchitecture.Application.Bots.Engine
             if (turn.Session.HasFlow)
             {
                 await TidyPendingAsync(turn, "لغو شد");
-                turn.Session.ClearFlow();
+                await EndFlowAsync(turn, BotFlowRun.Cancelled);
             }
 
             // دکمه‌های پیام منو برداشته می‌شوند و مسیر انتخاب زیرش می‌ماند.
             if (sourceMessageId is Guid source)
                 await messenger.EditAsync(turn, source, null, PathNote(turn, node), markEdited: false);
 
-            await StartFlowAsync(turn, node.FlowKey, node.ParamsJson);
+            await StartFlowAsync(turn, node.FlowKey, node.ParamsJson, node.Id);
         }
 
         private static BotReplyMarkup PathNote(BotTurn turn, BotMenuNode node)
@@ -201,7 +207,7 @@ namespace CleanArchitecture.Application.Bots.Engine
             {
                 var hadFlow = session.HasFlow;
                 await TidyPendingAsync(turn, "لغو شد");
-                session.ClearFlow();
+                await EndFlowAsync(turn, BotFlowRun.Cancelled);
                 await ShowRootWithTextAsync(turn, hadFlow
                     ? "کار نیمه‌تمام لغو شد. چه کار دیگری برایتان انجام دهم؟"
                     : "کاری در جریان نبود. چه کاری برایتان انجام دهم؟");
@@ -211,7 +217,7 @@ namespace CleanArchitecture.Application.Bots.Engine
             if (StartWords.Contains(text))
             {
                 await TidyPendingAsync(turn, "لغو شد");
-                session.ClearFlow();
+                await EndFlowAsync(turn, BotFlowRun.Cancelled);
                 var root = turn.Menu.Root;
                 if (root is not null)
                     await ShowMenuAsync(turn, root, null);
@@ -302,7 +308,7 @@ namespace CleanArchitecture.Application.Bots.Engine
 
         // ------------------------------------------------------------------ جریان
 
-        private async Task StartFlowAsync(BotTurn turn, string? flowKey, string? paramsJson)
+        private async Task StartFlowAsync(BotTurn turn, string? flowKey, string? paramsJson, Guid? nodeId)
         {
             var descriptor = registry.FindFlow(flowKey);
             if (descriptor is null)
@@ -313,6 +319,8 @@ namespace CleanArchitecture.Application.Bots.Engine
             }
 
             turn.Session.StartFlow(descriptor.Key, paramsJson);
+            _run = BotFlowRun.Start(turn.Bot.Id, turn.Human.Id, descriptor.Key, nodeId);
+            uow.BotFlowRuns.Add(_run);
             await RunFlowAsync(turn, descriptor, new BotFlowState(), input: null, firstRun: true);
         }
 
@@ -322,7 +330,7 @@ namespace CleanArchitecture.Application.Bots.Engine
             var descriptor = registry.FindFlow(session.FlowKey);
             if (descriptor is null)
             {
-                session.ClearFlow();
+                await EndFlowAsync(turn, BotFlowRun.Failed);
                 await ShowRootWithTextAsync(turn, "این بخش موقتاً در دسترس نیست.");
                 return;
             }
@@ -330,7 +338,7 @@ namespace CleanArchitecture.Application.Bots.Engine
             if (session.FlowStartedAt is DateTime started && DateTime.Now - started > FlowLifetime)
             {
                 await TidyPendingAsync(turn, "زمانش تمام شد");
-                session.ClearFlow();
+                await EndFlowAsync(turn, BotFlowRun.Expired);
                 await ShowRootWithTextAsync(turn, "زمان این کار تمام شده بود؛ لطفاً دوباره از منو شروع کنید.");
                 return;
             }
@@ -362,7 +370,7 @@ namespace CleanArchitecture.Application.Bots.Engine
             catch (Exception ex)
             {
                 logger.LogError(ex, "Bot flow {Flow} could not be created", descriptor.Key);
-                session.ClearFlow();
+                await EndFlowAsync(turn, BotFlowRun.Failed);
                 await messenger.SendAsync(turn, "این بخش موقتاً در دسترس نیست.");
                 return;
             }
@@ -381,22 +389,51 @@ namespace CleanArchitecture.Application.Bots.Engine
                     break;
 
                 case BotFlowOutcome.Completed:
-                    session.ClearFlow();
+                    await EndFlowAsync(turn, BotFlowRun.Done);
                     break;
 
                 case BotFlowOutcome.ReplayMismatch:
                     await TidyPendingAsync(turn, "لغو شد");
-                    session.ClearFlow();
+                    await EndFlowAsync(turn, BotFlowRun.Failed);
                     await ShowRootWithTextAsync(turn, "این بخش به‌روز شده است؛ لطفاً دوباره از منو شروع کنید.");
                     break;
 
                 case BotFlowOutcome.Failed:
                     logger.LogError(execution.Error, "Bot flow {Flow} failed for user {User}", descriptor.Key, turn.Human.Id);
                     await TidyPendingAsync(turn, "ناتمام ماند");
-                    session.ClearFlow();
+                    await EndFlowAsync(turn, BotFlowRun.Failed);
                     await ShowRootWithTextAsync(turn, "متأسفانه خطایی پیش آمد. لطفاً کمی بعد دوباره امتحان کنید.");
                     break;
             }
+        }
+
+        /// <summary>جریان جاری را می‌بندد و نتیجه‌اش را برای گزارش‌ها ثبت می‌کند.</summary>
+        private async Task EndFlowAsync(BotTurn turn, string outcome)
+        {
+            if (turn.Session.HasFlow)
+                await EndRunAsync(turn, outcome);
+            turn.Session.ClearFlow();
+        }
+
+        /// <summary>
+        /// ثبت پایان اجرا. اگر جریان در همین نوبت شروع شده همان را می‌بندد، وگرنه آخرین
+        /// اجرای باز همین کاربر در همین ربات. خطای ثبت آمار نباید جواب ربات را خراب کند.
+        /// </summary>
+        private async Task EndRunAsync(BotTurn turn, string outcome)
+        {
+            try
+            {
+                var run = _run ?? await uow.BotFlowRuns
+                    .Where(r => r.BotId == turn.Bot.Id && r.UserId == turn.Human.Id && r.EndedAt == null)
+                    .OrderByDescending(r => r.StartedAt)
+                    .FirstOrDefaultAsync(turn.CancellationToken);
+                run?.End(outcome);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Bot flow run could not be closed for bot {Bot}", turn.Bot.Handle);
+            }
+            _run = null;
         }
 
         /// <summary>دکمه‌های سؤالِ بی‌جواب جریان را برمی‌دارد و یادداشتی زیرش می‌گذارد.</summary>

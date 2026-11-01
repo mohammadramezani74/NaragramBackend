@@ -64,6 +64,8 @@ namespace CleanArchitecture.Application.AdminPanel
             "admin.grant" => "دسترسی مدیریت داده یا تغییر داده شد",
             "admin.revoke" => "از مدیران حذف شد",
             "admin.signout" => "از پنل مدیریت خارج شد",
+            "feedback.status" => "وضعیت بازخورد تغییر کرد",
+            "feedback.reply" => "به بازخورد جواب داده شد",
             _ => action,
         };
 

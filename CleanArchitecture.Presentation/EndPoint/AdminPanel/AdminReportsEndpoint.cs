@@ -21,6 +21,10 @@ namespace CleanArchitecture.Presentation.EndPoint.AdminPanel
                 BotsEndpoint.ToResult(await sender.Send(new GetInactiveUsersQuery(days ?? 30, take ?? 200), ct)))
                 .AdminOnly(PanelPermissions.Reports);
 
+            admin.MapGet("/bots", async ([FromServices] ISender sender, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct) =>
+                BotsEndpoint.ToResult(await sender.Send(new GetBotReportQuery(from ?? DateTime.Today.AddDays(-29), to ?? DateTime.Today), ct)))
+                .AdminOnly(PanelPermissions.Reports);
+
             admin.MapGet("/audit", async (
                 [FromServices] ISender sender,
                 [FromQuery] int? page, [FromQuery] int? size, [FromQuery] string? area, [FromQuery] Guid? actorId,

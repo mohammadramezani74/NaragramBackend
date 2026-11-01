@@ -21,6 +21,7 @@
         public const string Reports = "reports";
         public const string Audit = "audit";
         public const string Settings = "settings";
+        public const string Feedback = "feedback";
 
         public static readonly IReadOnlyList<AdminPermissionInfo> All =
         [
@@ -30,6 +31,7 @@
             new(Rooms, "گروه‌ها و کانال‌ها", "دیدن، ویرایش و بایگانی گروه‌ها و کانال‌ها"),
             new(Bots, "ربات‌ها", "ساختن و تنظیم ربات‌ها و کلیدهای API"),
             new(Broadcast, "پیام همگانی", "فرستادن پیام به همه یا گروهی از کاربران"),
+            new(Feedback, "بازخورد کاربران", "خواندن نظر و پیشنهادهای کاربران درباره‌ی اپ و جواب دادن به آن‌ها"),
             new(Reports, "گزارش‌ها", "گزارش استفاده و کاربران غیرفعال"),
             new(Audit, "گزارش فعالیت مدیران", "دیدن کارهایی که مدیران در پنل انجام داده‌اند"),
             new(Settings, "تنظیمات", "اعلان بالای برنامه و اجازه‌ی ساخت گروه و کانال"),
